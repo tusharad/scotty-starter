@@ -25,7 +25,7 @@ defaultLayout pageTitle pageBody = docTypeHtml $ do
   head $ do
     meta ! charset "utf-8"
     meta ! name "viewport" ! content "width=device-width, initial-scale=1, maximum-scale=5"
-    meta ! name "description" ! content "Scotty Starter 2.0 - Production-Ready Haskell Web Application Starter"
+    meta ! name "description" ! content "Scotty Starter - Production-Ready Haskell Web Application Starter"
     title pageTitle
     link ! rel "icon" ! href "/favicon.ico"
     link ! rel "stylesheet" ! href "/css/pure.min.css"
@@ -67,7 +67,7 @@ defaultLayout pageTitle pageBody = docTypeHtml $ do
           a ! class_ "brand-badge" ! href "/" $ do
             span ! class_ "lambda-glyph" $ "λ"
             span "SCOTTY // STARTER"
-            span ! class_ "version-pill" $ "v0.2.0"
+            span ! class_ "version-pill" $ "v0.1.0"
           div ! class_ "status-pill" $ do
             span ! class_ "pulse-dot" $ mempty
             span "ONLINE :3000"
@@ -80,4 +80,4 @@ defaultLayout pageTitle pageBody = docTypeHtml $ do
     pageBody
 
     footer $ do
-      p "SCOTTY STARTER 2.0 • HASKELL WEB ENGINEERING STUDIO • GHC 9.10 • SCOTTY 0.30 • WARP • SQLITE • HTMX 2.0"
+      p "SCOTTY STARTER • HASKELL WEB ENGINEERING STUDIO • GHC 9.10 • SCOTTY 0.30 • WARP • SQLITE • HTMX"

@@ -2,14 +2,11 @@
 
 module Controllers.Home
     ( homeRoutes
-    , home
-    , login
     ) where
 
 import           App.Context                 (AppM, AppRoute)
 import qualified App.Database.Queries        as Q
 import           Control.Monad.IO.Class      (liftIO)
-import           Control.Monad.IO.Unlift     (MonadUnliftIO)
 import           Control.Monad.Trans.Class   (lift)
 import           Control.Monad.Trans.Reader  (ask)
 import           Data.IORef                  (IORef, atomicModifyIORef',
@@ -67,13 +64,3 @@ homeRoutes = do
   S.post "/partials/counter" $ do
     newCount <- liftIO $ atomicModifyIORef' globalCounter $ \c -> (c + 1, c + 1)
     blaze $ counterCard newCount
-
-  -- Simple Login route
-  S.get "/login" $ S.html "login"
-
--- | Legacy aliases for backward compatibility
-home :: AppRoute
-home = homeRoutes
-
-login :: MonadUnliftIO m => S.ScottyT m ()
-login = S.get "/login" $ S.html "login"

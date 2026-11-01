@@ -1,4 +1,4 @@
-# Scotty Starter 2.0
+# Scotty Starter
 
 > **A production-ready, battery-included web application starter kit for modern Haskell (GHC 9.10, Scotty 0.30, Warp, SQLite, and HTMX).**
 

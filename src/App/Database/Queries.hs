@@ -4,7 +4,6 @@ module App.Database.Queries
     ( listPosts
     , searchPosts
     , getPostById
-    , getFirstPost
     , createPost
     , updatePost
     , deletePost
@@ -22,11 +21,6 @@ import           Database.SQLite.Simple (Only (..), changes, execute,
 listPosts :: AppContext -> IO [Post]
 listPosts ctx = runDb (ctxDbPool ctx) $ \conn ->
   query_ conn "SELECT id, title FROM posts ORDER BY id DESC;"
-
--- | Retrieve the first post (legacy endpoint support).
-getFirstPost :: AppContext -> IO (Maybe Post)
-getFirstPost ctx = runDb (ctxDbPool ctx) $ \conn ->
-  listToMaybe <$> query_ conn "SELECT id, title FROM posts ORDER BY id ASC LIMIT 1;"
 
 -- | Search posts by title substring case-insensitively.
 searchPosts :: AppContext -> Text -> IO [Post]

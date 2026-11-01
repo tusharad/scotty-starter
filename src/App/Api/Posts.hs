@@ -25,16 +25,6 @@ import qualified Web.Scotty.Trans          as S
 
 postsRoutes :: AppRoute
 postsRoutes = do
-  -- Legacy backwards-compatible single post route
-  S.get "/post" $ do
-    ctx <- lift ask
-    mPost <- liftIO $ Q.getFirstPost ctx
-    case mPost of
-      Just p  -> S.json p
-      Nothing -> do
-        S.status status404
-        S.json ("No posts found" :: Text)
-
   -- GET /api/posts?q=query
   S.get "/api/posts" $ do
     ctx <- lift ask

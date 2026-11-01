@@ -37,7 +37,7 @@ cm  = span ! class_ "syn-cm"
 
 -- | Render the modern Haskell Engineering Studio layout.
 homeView :: MonadIO m => [Post] -> S.ActionT m ()
-homeView initialPosts = blaze $ defaultLayout "Scotty Starter 2.0 // Haskell Web Engineering Studio" $ do
+homeView initialPosts = blaze $ defaultLayout "Scotty Starter // Haskell Web Engineering Studio" $ do
   main ! class_ "workbench-container" $ do
 
     -- ------------------------------------------------------------------------
@@ -53,7 +53,7 @@ homeView initialPosts = blaze $ defaultLayout "Scotty Starter 2.0 // Haskell Web
         span ! class_ "spec-chip" $ do strong "Engine "; "Warp (-threaded -N)"
         span ! class_ "spec-chip" $ do strong "OpenAPI "; "3.0 (PR #438)"
         span ! class_ "spec-chip" $ do strong "DB "; "SQLite3 + Pool"
-        span ! class_ "spec-chip" $ do strong "UI "; "HTMX 2.0"
+        span ! class_ "spec-chip" $ do strong "UI "; "HTMX"
         span ! class_ "spec-chip" $ do strong "Errors "; "RFC 7807"
 
     -- ------------------------------------------------------------------------
@@ -511,7 +511,7 @@ homeView initialPosts = blaze $ defaultLayout "Scotty Starter 2.0 // Haskell Web
               span "/api/tour/errors/:type"
             h3 ! class_ "pane-title" $ "Centralized Error Boundaries & RFC 7807"
             p ! class_ "pane-description" $
-              "Scotty provides S.defaultHandler to catch unhandled exceptions. In Scotty Starter 2.0, this converts errors into standard RFC 7807 Problem Details (application/problem+json) with titles, status codes, and diagnostics."
+              "Scotty provides S.defaultHandler to catch unhandled exceptions. In Scotty Starter, this converts errors into standard RFC 7807 Problem Details (application/problem+json) with titles, status codes, and diagnostics."
 
           div ! class_ "studio-work-area" $ do
             div ! class_ "code-window" $ do

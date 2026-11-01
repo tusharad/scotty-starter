@@ -84,9 +84,6 @@ spec = do
       it "GET / serves modernized HTML5 shell with HTMX script" $ do
         get "/" `shouldRespondWith` 200
 
-      it "GET /login responds with 200 OK" $ do
-        get "/login" `shouldRespondWith` 200
-
     describe "Swagger UI & OpenAPI 3.0 Documentation (PR #438)" $ do
       it "GET /docs serves Swagger UI HTML" $ do
         get "/docs" `shouldRespondWith` 200
@@ -137,9 +134,6 @@ spec = do
         post "/partials/counter" "" `shouldRespondWith` 200
 
     describe "Database-Backed REST API (JSON)" $ do
-      it "GET /post responds with 200 OK and first post" $ do
-        get "/post" `shouldRespondWith` 200
-
       it "GET /api/posts returns seeded posts" $ do
         get "/api/posts" `shouldRespondWith` 200
 

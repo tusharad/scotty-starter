@@ -61,7 +61,7 @@ healthRoutes = do
     let uptime = realToFrac (diffUTCTime now (ctxStartTime ctx)) :: Double
         envStr = T.pack . show $ cfgEnv (ctxConfig ctx)
     S.status status200
-    S.json $ HealthStatus "pass" uptime envStr "0.2.0.0"
+    S.json $ HealthStatus "pass" uptime envStr "0.1.0.0"
 
   S.get "/readyz" $ do
     ctx <- lift ask

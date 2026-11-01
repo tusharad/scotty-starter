@@ -1,6 +1,6 @@
 cabal-version:       3.0
 name:                scotty-starter
-version:             0.2.0.0
+version:             0.1.0.0
 synopsis:            Starter kit project for Scotty web applications
 description:         A modern, production-ready starter kit for building web applications with the Scotty framework in Haskell.
 homepage:            https://github.com/scotty-web/scotty-starter
