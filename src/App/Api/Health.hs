@@ -9,6 +9,7 @@ module App.Api.Health
 
 import           App.Config                 (Config (..))
 import           App.Context                (AppContext (..), AppRoute)
+import           App.Database               (pingDb)
 import           Control.Monad.IO.Class     (liftIO)
 import           Control.Monad.Trans.Class  (lift)
 import           Control.Monad.Trans.Reader (ask)
@@ -18,7 +19,7 @@ import           Data.Text                  (Text)
 import qualified Data.Text                  as T
 import           Data.Time.Clock            (diffUTCTime, getCurrentTime)
 import           GHC.Generics               (Generic)
-import           Network.HTTP.Types.Status  (status200)
+import           Network.HTTP.Types.Status  (status200, status503)
 import qualified Web.Scotty.Trans           as S
 
 data HealthStatus = HealthStatus
@@ -58,5 +59,15 @@ healthRoutes = do
     S.json $ HealthStatus "pass" uptime envStr "0.2.0.0"
 
   S.get "/readyz" $ do
-    S.status status200
-    S.json $ ReadinessStatus "ready" [("app", "ok")]
+    ctx <- lift ask
+    dbOk <- liftIO $ pingDb (ctxDbPool ctx)
+    let checks = [ ("app", "ok")
+                 , ("database", if dbOk then "ok" else "error")
+                 ]
+    if dbOk
+      then do
+        S.status status200
+        S.json $ ReadinessStatus "ready" checks
+      else do
+        S.status status503
+        S.json $ ReadinessStatus "unavailable" checks

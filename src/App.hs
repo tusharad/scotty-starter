@@ -11,7 +11,9 @@ module App
 
 import           App.Api.Health                       (healthRoutes)
 import           App.Api.Posts                        (postsRoutes)
-import           App.Config                           (Config (..), loadConfig)
+import           App.Config                           (Config (..),
+                                                       Environment (..),
+                                                       loadConfig)
 import           App.Context                          (AppContext (..),
                                                        AppRoute, initContext,
                                                        runAppM)
@@ -38,11 +40,15 @@ app = do
 makeApp :: AppContext -> IO Application
 makeApp ctx = S.scottyAppT S.defaultOptions (runAppM ctx) app
 
--- | Build a default WAI Application for testing.
+-- | Build a default WAI Application for testing with in-memory SQLite.
 defaultTestApp :: IO Application
 defaultTestApp = do
   cfg <- loadConfig
-  ctx <- initContext cfg
+  let testCfg = cfg
+        { cfgEnv          = Test
+        , cfgDatabasePath = ":memory:"
+        }
+  ctx <- initContext testCfg
   makeApp ctx
 
 -- | Run the application with a given configuration.

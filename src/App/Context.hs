@@ -7,7 +7,8 @@ module App.Context
     , runAppM
     ) where
 
-import           App.Config                  (Config)
+import           App.Config                  (Config (..))
+import           App.Database                (DbPool, initDbPool)
 import           Control.Monad.Trans.Reader  (ReaderT, runReaderT)
 import           Data.Time.Clock             (UTCTime, getCurrentTime)
 import           Web.Scotty.Internal.Types   (ActionT, ScottyT)
@@ -16,6 +17,7 @@ import           Web.Scotty.Internal.Types   (ActionT, ScottyT)
 data AppContext = AppContext
   { ctxConfig    :: !Config
   , ctxStartTime :: !UTCTime
+  , ctxDbPool    :: !DbPool
   }
 
 -- | The application monad stack, providing ReaderT AppContext over IO.
@@ -30,13 +32,14 @@ type AppRoute = ScottyT AppM ()
 -- | Initialize application context given configuration.
 initContext :: Config -> IO AppContext
 initContext cfg = do
-  now <- getCurrentTime
+  now  <- getCurrentTime
+  pool <- initDbPool (cfgDatabasePath cfg)
   pure AppContext
     { ctxConfig    = cfg
     , ctxStartTime = now
+    , ctxDbPool    = pool
     }
 
 -- | Natural transformation to run AppM actions in IO.
 runAppM :: AppContext -> AppM a -> IO a
 runAppM = flip runReaderT
-

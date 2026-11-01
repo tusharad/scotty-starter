@@ -21,10 +21,11 @@ data Environment
 
 -- | Application configuration settings.
 data Config = Config
-  { cfgPort        :: !Int
-  , cfgEnv         :: !Environment
-  , cfgLogLevel    :: !Text
-  , cfgDatabaseUrl :: !(Maybe Text)
+  { cfgPort         :: !Int
+  , cfgEnv          :: !Environment
+  , cfgLogLevel     :: !Text
+  , cfgDatabasePath :: !FilePath
+  , cfgDatabaseUrl  :: !(Maybe Text)
   } deriving (Show, Eq)
 
 -- | Parse environment name safely from text.
@@ -43,17 +44,21 @@ loadConfig = do
   portEnv <- lookupEnv "PORT"
   envStr  <- lookupEnv "SCOTTY_ENV" >>= maybe (lookupEnv "ENV") (pure . Just)
   logLvl  <- lookupEnv "LOG_LEVEL"
+  dbPath  <- lookupEnv "DATABASE_PATH"
   dbUrl   <- lookupEnv "DATABASE_URL"
 
   let port = fromMaybe 3000 (portEnv >>= readMaybe)
       env  = parseEnvironment envStr
       logLevel = maybe "DEBUG" T.pack logLvl
+      databasePath = case dbPath of
+        Just p  -> p
+        Nothing -> if env == Test then ":memory:" else "scotty.db"
       databaseUrl = fmap T.pack dbUrl
 
   pure Config
-    { cfgPort        = port
-    , cfgEnv         = env
-    , cfgLogLevel    = logLevel
-    , cfgDatabaseUrl = databaseUrl
+    { cfgPort         = port
+    , cfgEnv          = env
+    , cfgLogLevel     = logLevel
+    , cfgDatabasePath = databasePath
+    , cfgDatabaseUrl  = databaseUrl
     }
-

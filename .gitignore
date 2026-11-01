@@ -30,6 +30,13 @@ result-*
 .env.*
 !.env.example
 
+# Databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
 # Sandboxes (legacy)
 cabal.sandbox.config
 .hsenv
