@@ -15,13 +15,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 # Cache dependencies layer
-COPY scotty-starter.cabal cabal.project ./
+COPY scotty-starter.cabal cabal.project* ./
 RUN cabal update && cabal build --only-dependencies -j
 
 # Copy source code and build production binary
 COPY . .
-RUN cabal build exe:scotty-starter --enable-optimization=2 \
- && cp "$(cabal list-bin exe:scotty-starter)" /build/scotty-starter
+RUN cabal install exe:scotty-starter \
+    --install-method=copy \
+    --installdir=/build \
+    --overwrite-policy=always \
+    --enable-optimization=2
 
 # =============================================================================
 # Runtime Stage
