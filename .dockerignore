@@ -1,0 +1,12 @@
+dist-newstyle/
+.stack-work/
+.git
+.github/
+.env
+.env.*
+*.db
+*.db-journal
+.direnv/
+ROADMAP.md
+result
+docs/

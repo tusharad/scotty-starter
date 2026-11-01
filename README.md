@@ -11,14 +11,17 @@
 
 ## Highlights
 
-* **Modern Haskell Toolchain:** Built for **GHC 9.10.3** and **Cabal 3.0+**, with Nix Flakes (`flake.nix`) and multi-compiler GitHub Actions CI (`GHC 9.6`, `9.8`, `9.10`).
+* **Modern Haskell Toolchain:** Built for **GHC 9.10.3** and **Cabal 3.0+** / **Stack 3.0+ (LTS 24)**, with Nix Flakes (`flake.nix`) and multi-compiler GitHub Actions CI (`GHC 9.6`, `9.8`, `9.10`).
 * **High-Throughput Warp Runtime:** Configured with `-threaded -rtsopts -with-rtsopts=-N` for multi-core request parallelization.
+* **Production Middleware Pipeline:** OWASP security headers (`nosniff`, `SAMEORIGIN`, `CSP`), correlation request ID tracing (`X-Request-ID`), and configurable CORS.
+* **Loosely-Coupled UI / Headless API Mode:** Web UI (Blaze + HTMX) can be completely disabled via `ENABLE_WEB_UI=false` to run Scotty strictly as a headless JSON REST API microservice for React/Next.js/mobile clients.
+* **Decoupled Architecture:** Clean separation of concerns with dedicated domain models (`App.Models.Post`) and data access queries (`App.Database.Queries`).
 * **Built-in Swagger UI & OpenAPI 3.0:** Declarative route documentation combinators based on [scotty-web/scotty PR #438](https://github.com/scotty-web/scotty/pull/438). Interactive Swagger UI served at `/docs` and raw spec at `/openapi.json`.
 * **Pedagogical Scotty 0.30 Tour:** Endpoints covering path parameters, query parameters, Aeson JSON deserialization, multipart form submissions, headers, cookies, custom status codes, and HTTP redirects.
 * **Production Database Layer:** Connection pooling via `resource-pool >= 0.4` and SQLite (`sqlite-simple >= 0.4`), backed by an automated transactional migration runner (`schema_migrations`).
 * **RFC 7807 Problem Details:** Centralized exception handling formatting runtime errors into structured `application/problem+json` error payloads.
 * **Zero-CDN Reactive Hypermedia:** Fully self-hosted HTMX 2.0.4 and Pure.css responsive base for real-time DOM mutations without heavy client-side JavaScript frameworks.
-* **Comprehensive Automated Tests:** 30 integration test cases using `hspec-wai` and in-memory SQLite isolation.
+* **Comprehensive Automated Tests:** 38 integration test cases using `hspec-wai` and in-memory SQLite isolation.
 
 ---
 
@@ -108,10 +111,16 @@ scotty-starter/
 │   │   ├── Context.hs              # ReaderT monad stack & connection pool
 │   │   ├── Database.hs             # ResourcePool connection manager
 │   │   ├── Database/
-│   │   │   └── Migrations.hs       # Transactional migration runner
+│   │   │   ├── Migrations.hs       # Transactional migration runner
+│   │   │   └── Queries.hs          # Decoupled SQL data-access queries
 │   │   ├── Docs.hs                 # OpenAPI 3.0 spec & Swagger UI (PR #438)
 │   │   ├── Middleware/
-│   │   │   └── ErrorHandler.hs     # RFC 7807 problem details boundary
+│   │   │   ├── Cors.hs             # Configurable CORS & preflight middleware
+│   │   │   ├── ErrorHandler.hs     # RFC 7807 problem details boundary
+│   │   │   ├── RequestId.hs        # Correlation X-Request-ID tracer
+│   │   │   └── SecurityHeaders.hs  # OWASP security headers (nosniff, CSP, etc.)
+│   │   ├── Models/
+│   │   │   └── Post.hs             # Strict domain entities (Aeson + SQLite rows)
 │   │   └── Api/
 │   │       ├── Health.hs           # Operational probes (/healthz, /readyz)
 │   │       ├── Posts.hs            # Database-backed RESTful CRUD routes
@@ -131,14 +140,31 @@ scotty-starter/
 │       └── htmx.min.js             # Self-hosted HTMX 2.0.4 library
 ├── test/
 │   ├── Spec.hs                     # Hspec test discovery
-│   └── AppSpec.hs                  # 30 HTTP integration test cases
+│   └── AppSpec.hs                  # 38 HTTP integration test cases
+├── .dockerignore                   # Docker build exclusions
+├── .env.example                    # Sample environment variables
 ├── Dockerfile                      # Multi-stage production container
 ├── docker-compose.yml              # Local container development config
 ├── flake.nix                       # Reproducible Nix developer shell
 ├── Makefile                        # Developer automation shortcuts
-├── scotty-starter.cabal            # Cabal package specification
+├── scotty-starter.cabal            # Cabal package specification (GHC2021)
 └── stack.yaml                      # Stack configuration (LTS 24 snapshot)
 ```
+
+---
+
+## Environment Configuration
+
+Configure the application using environment variables or a `.env` file (copied from `.env.example`):
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `PORT` | `3000` | Port for the Warp HTTP server |
+| `SCOTTY_ENV` | `development` | Environment mode (`development`, `production`, `test`) |
+| `LOG_LEVEL` | `info` | Logging verbosity (`debug`, `info`, `warn`, `error`) |
+| `DATABASE_URL` | `sqlite://scotty.db` | SQLite connection string (`sqlite://:memory:` for tests) |
+| `ENABLE_WEB_UI` | `true` | When `false`, unmounts HTML & static files for a headless API |
+| `CORS_ORIGINS` | `*` | Comma-separated list of allowed origins for `/api/*` |
 
 ---
 

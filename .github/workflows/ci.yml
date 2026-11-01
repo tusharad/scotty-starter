@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,15 +6,53 @@ on:
   pull_request:
     branches: [ master, main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  build:
-    name: GHC ${{ matrix.ghc }} on ${{ matrix.os }}
+  # ===========================================================================
+  # 1. Fast-Fail Code Quality & Linters
+  # ===========================================================================
+  quality:
+    name: Code Quality & Spec Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Haskell (GHC & Cabal)
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: '9.10.3'
+          cabal-version: '3.12.1.0'
+
+      - name: Verify Cabal package specification
+        run: cabal check
+
+      - name: Set up HLint
+        uses: haskell-actions/hlint-setup@v2
+        with:
+          version: '3.8'
+
+      - name: Run HLint
+        uses: haskell-actions/hlint-run@v2
+        with:
+          path: '["src", "app", "test"]'
+          fail-on: warning
+
+  # ===========================================================================
+  # 2. Multi-Compiler & Multi-OS Matrix (Cabal 3.0+)
+  # ===========================================================================
+  cabal-matrix:
+    name: Cabal / GHC ${{ matrix.ghc }} on ${{ matrix.os }}
+    needs: quality
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        ghc: ['9.6.6', '9.8.2', '9.10.1']
+        ghc: ['9.6.6', '9.8.2', '9.10.3']
         cabal: ['3.12.1.0']
 
     steps:
@@ -34,15 +72,12 @@ jobs:
             ~/.cabal/packages
             ~/.cabal/store
             dist-newstyle
-          key: ${{ matrix.os }}-ghc-${{ matrix.ghc }}-cabal-${{ hashFiles('**/*.cabal') }}
+          key: ${{ matrix.os }}-ghc-${{ matrix.ghc }}-cabal-${{ hashFiles('**/*.cabal', 'cabal.project') }}
           restore-keys: |
             ${{ matrix.os }}-ghc-${{ matrix.ghc }}-
 
       - name: Cabal update
         run: cabal update
-
-      - name: Verify package specification
-        run: cabal check
 
       - name: Build dependencies
         run: cabal build --only-dependencies --enable-tests
@@ -53,3 +88,120 @@ jobs:
       - name: Run test suite
         run: cabal test scotty-starter-test --test-show-details=direct
 
+  # ===========================================================================
+  # 3. Stack Dual-Tooling Verification (LTS 24.65)
+  # ===========================================================================
+  stack-test:
+    name: Stack / LTS Build & Test
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Haskell with Stack
+        uses: haskell-actions/setup@v2
+        with:
+          enable-stack: true
+          stack-version: 'latest'
+
+      - name: Cache ~/.stack and .stack-work
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.stack
+            .stack-work
+          key: stack-${{ runner.os }}-${{ hashFiles('stack.yaml*', 'scotty-starter.cabal') }}
+          restore-keys: |
+            stack-${{ runner.os }}-
+
+      - name: Build and Run Tests via Stack
+        run: stack test --ghc-options="-Wall -Werror"
+
+  # ===========================================================================
+  # 4. Multi-Stage Docker Container Build & Smoke Test
+  # ===========================================================================
+  docker-smoke-test:
+    name: Docker Container Smoke Test
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production container image
+        run: docker build -t scotty-starter:ci .
+
+      - name: Run container in background
+        run: |
+          docker run -d --name scotty-ci-app \
+            -p 3000:3000 \
+            -e PORT=3000 \
+            -e SCOTTY_ENV=production \
+            scotty-starter:ci
+
+      - name: Wait for server readiness and run probe smoke tests
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:3000/healthz > /dev/null 2>&1; then
+              echo "Server is healthy!"
+              break
+            fi
+            echo "Waiting for server to start... ($i/30)"
+            sleep 1
+          done
+
+          # Liveness & Readiness checks
+          curl -fsS http://localhost:3000/healthz | grep -q '"status":"ok"'
+          curl -fsS http://localhost:3000/readyz | grep -q '"status":"ready"'
+          
+          # OpenAPI JSON probe
+          curl -fsS http://localhost:3000/openapi.json | grep -q '"openapi":"3.0.0"'
+          
+          # REST API database probe
+          curl -fsS http://localhost:3000/api/posts | grep -q 'postId'
+          
+          # HTML5 homepage probe
+          curl -fsS http://localhost:3000/ | grep -q 'Scotty Web Starter'
+
+      - name: Inspect container logs
+        if: always()
+        run: docker logs scotty-ci-app || true
+
+      - name: Clean up container
+        if: always()
+        run: docker rm -f scotty-ci-app || true
+
+  # ===========================================================================
+  # 5. Automated GitHub Pages Showcase Deployment
+  # ===========================================================================
+  deploy-pages:
+    name: Deploy Showcase to GitHub Pages
+    needs: [cabal-matrix, stack-test, docker-smoke-test]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload static showcase artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

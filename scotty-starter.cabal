@@ -27,8 +27,13 @@ library
                        App.Context
                        App.Database
                        App.Database.Migrations
+                       App.Database.Queries
                        App.Docs
+                       App.Middleware.Cors
                        App.Middleware.ErrorHandler
+                       App.Middleware.RequestId
+                       App.Middleware.SecurityHeaders
+                       App.Models.Post
                        Controllers.Home
                        Views.Home
                        Views.Layout
@@ -36,6 +41,10 @@ library
                        Views.Utils
   hs-source-dirs:      src
   ghc-options:         -Wall
+                       -Wcompat
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
   default-extensions:  OverloadedStrings
   build-depends:       base                  >= 4.14 && < 5
                      , scotty                >= 0.30 && < 0.31
@@ -55,19 +64,23 @@ library
                      , unliftio-core         >= 0.2  && < 0.3
                      , sqlite-simple         >= 0.4  && < 0.5
                      , resource-pool         >= 0.4  && < 0.6
-  default-language:    Haskell2010
+  default-language:    GHC2021
 
 executable scotty-starter
   main-is:             Main.hs
   hs-source-dirs:      app
   ghc-options:         -Wall
+                       -Wcompat
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
                        -threaded
                        -rtsopts
                        -with-rtsopts=-N
   default-extensions:  OverloadedStrings
   build-depends:       base                  >= 4.14 && < 5
                      , scotty-starter
-  default-language:    Haskell2010
+  default-language:    GHC2021
 
 test-suite scotty-starter-test
   type:                exitcode-stdio-1.0
@@ -75,6 +88,10 @@ test-suite scotty-starter-test
   other-modules:       AppSpec
   hs-source-dirs:      test
   ghc-options:         -Wall
+                       -Wcompat
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
                        -threaded
                        -rtsopts
                        -with-rtsopts=-N
@@ -86,4 +103,6 @@ test-suite scotty-starter-test
                      , hspec-wai-json        >= 0.11 && < 0.13
                      , aeson                 >= 2.0  && < 2.3
                      , http-types            >= 0.12 && < 0.13
-  default-language:    Haskell2010
+                     , wai                   >= 3.2  && < 3.3
+                     , wai-extra             >= 3.0  && < 3.2
+  default-language:    GHC2021

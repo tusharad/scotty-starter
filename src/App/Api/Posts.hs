@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module App.Api.Posts
@@ -8,58 +7,31 @@ module App.Api.Posts
     , postsRouteDocs
     ) where
 
-import           App.Context               (AppContext (..), AppM, AppRoute)
-import           App.Database              (runDb)
+import           App.Context               (AppM, AppRoute)
+import qualified App.Database.Queries      as Q
 import           App.Docs                  (RouteInfo (..), defaultRouteDoc,
-                                            description, paramDoc,
-                                            pathParamDoc, queryParamDoc,
-                                            summary, tags)
+                                             description, paramDoc,
+                                             pathParamDoc, queryParamDoc,
+                                             summary, tags)
+import           App.Models.Post           (CreatePostRequest (..), Post (..))
 import           Control.Monad.IO.Class    (liftIO)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Reader (ask)
-import           Data.Aeson                (FromJSON, ToJSON)
 import           Data.Text                 (Text)
-import           Database.SQLite.Simple    (FromRow (..), Only (..),
-                                            ToRow (..), changes, execute,
-                                            field, lastInsertRowId, query,
-                                            query_)
-import           GHC.Generics              (Generic)
 import           Network.HTTP.Types        (StdMethod (..))
 import           Network.HTTP.Types.Status (status200, status201, status404)
 import           Web.Scotty.Internal.Types (RoutePattern (..))
 import qualified Web.Scotty.Trans          as S
-
-data Post = Post
-  { postId    :: !Int
-  , postTitle :: !Text
-  } deriving (Show, Eq, Generic)
-
-instance ToJSON Post
-instance FromJSON Post
-
-instance FromRow Post where
-  fromRow = Post <$> field <*> field
-
-instance ToRow Post where
-  toRow (Post i t) = toRow (i, t)
-
-data CreatePostRequest = CreatePostRequest
-  { title :: !Text
-  } deriving (Show, Eq, Generic)
-
-instance ToJSON CreatePostRequest
-instance FromJSON CreatePostRequest
 
 postsRoutes :: AppRoute
 postsRoutes = do
   -- Legacy backwards-compatible single post route
   S.get "/post" $ do
     ctx <- lift ask
-    posts <- liftIO $ runDb (ctxDbPool ctx) $ \conn ->
-      query_ conn "SELECT id, title FROM posts ORDER BY id ASC LIMIT 1;" :: IO [Post]
-    case posts of
-      (p:_) -> S.json p
-      []    -> do
+    mPost <- liftIO $ Q.getFirstPost ctx
+    case mPost of
+      Just p  -> S.json p
+      Nothing -> do
         S.status status404
         S.json ("No posts found" :: Text)
 
@@ -67,23 +39,22 @@ postsRoutes = do
   S.get "/api/posts" $ do
     ctx <- lift ask
     mQuery <- S.queryParamMaybe "q" :: S.ActionT AppM (Maybe Text)
-    posts <- liftIO $ runDb (ctxDbPool ctx) $ \conn -> case mQuery of
-      Just q  -> query conn "SELECT id, title FROM posts WHERE title LIKE ? ORDER BY id ASC;" (Only ("%" <> q <> "%"))
-      Nothing -> query_ conn "SELECT id, title FROM posts ORDER BY id ASC;"
+    posts <- liftIO $ case mQuery of
+      Just q  -> Q.searchPosts ctx q
+      Nothing -> Q.listPosts ctx
     S.status status200
-    S.json (posts :: [Post])
+    S.json posts
 
   -- GET /api/posts/:id (Modern pathParam)
   S.get "/api/posts/:id" $ do
     ctx <- lift ask
     pid <- S.pathParam "id" :: S.ActionT AppM Int
-    posts <- liftIO $ runDb (ctxDbPool ctx) $ \conn ->
-      query conn "SELECT id, title FROM posts WHERE id = ? LIMIT 1;" (Only pid) :: IO [Post]
-    case posts of
-      (p:_) -> do
+    mPost <- liftIO $ Q.getPostById ctx pid
+    case mPost of
+      Just p -> do
         S.status status200
         S.json p
-      []    -> do
+      Nothing -> do
         S.status status404
         S.json ("Post not found" :: Text)
 
@@ -91,10 +62,7 @@ postsRoutes = do
   S.post "/api/posts" $ do
     ctx <- lift ask
     req <- S.jsonData
-    newPost <- liftIO $ runDb (ctxDbPool ctx) $ \conn -> do
-      execute conn "INSERT INTO posts (title) VALUES (?);" (Only (title req))
-      rowId <- lastInsertRowId conn
-      pure $ Post (fromIntegral rowId) (title req)
+    newPost <- liftIO $ Q.createPost ctx (title req)
     S.status status201
     S.json newPost
 
@@ -103,10 +71,7 @@ postsRoutes = do
     ctx <- lift ask
     pid <- S.pathParam "id" :: S.ActionT AppM Int
     req <- S.jsonData
-    updated <- liftIO $ runDb (ctxDbPool ctx) $ \conn -> do
-      execute conn "UPDATE posts SET title = ? WHERE id = ?;" (title req, pid)
-      c <- changes conn
-      pure (c > 0)
+    updated <- liftIO $ Q.updatePost ctx pid (title req)
     if updated
       then do
         S.status status200
@@ -119,10 +84,7 @@ postsRoutes = do
   S.delete "/api/posts/:id" $ do
     ctx <- lift ask
     pid <- S.pathParam "id" :: S.ActionT AppM Int
-    deleted <- liftIO $ runDb (ctxDbPool ctx) $ \conn -> do
-      execute conn "DELETE FROM posts WHERE id = ?;" (Only pid)
-      c <- changes conn
-      pure (c > 0)
+    deleted <- liftIO $ Q.deletePost ctx pid
     if deleted
       then do
         S.status status200
@@ -138,45 +100,44 @@ postsRouteDocs =
       (Just GET)
       (Literal "/api/posts")
       ( summary "List all posts"
-      . description "Fetches posts from SQLite with optional case-insensitive substring search via ?q=..."
-      . tags ["07: State & Persistence (SQLite)"]
-      . paramDoc (queryParamDoc "q" "string" False)
+      . description "Retrieve posts ordered by newest first, optionally filtering by title."
+      . tags ["Posts"]
+      . paramDoc (queryParamDoc "q" "Filter posts by title substring" False)
       $ defaultRouteDoc
       )
   , RouteInfo
       (Just GET)
       (Capture "/api/posts/:id")
-      ( summary "Fetch post by ID"
-      . description "Queries SQLite for a post matching the primary key :id."
-      . tags ["07: State & Persistence (SQLite)"]
-      . paramDoc (pathParamDoc "id" "integer")
+      ( summary "Get post by ID"
+      . description "Retrieve a single post by its integer identifier."
+      . tags ["Posts"]
+      . paramDoc (pathParamDoc "id" "Post numeric ID")
       $ defaultRouteDoc
       )
   , RouteInfo
       (Just POST)
       (Literal "/api/posts")
       ( summary "Create a new post"
-      . description "Inserts a new post record into SQLite and returns the created post with auto-increment ID."
-      . tags ["07: State & Persistence (SQLite)"]
+      . description "Create a new post with JSON body: { \"title\": \"...\" }"
+      . tags ["Posts"]
       $ defaultRouteDoc
       )
   , RouteInfo
       (Just PUT)
       (Capture "/api/posts/:id")
       ( summary "Update a post"
-      . description "Updates the title of an existing post in SQLite."
-      . tags ["07: State & Persistence (SQLite)"]
-      . paramDoc (pathParamDoc "id" "integer")
+      . description "Update an existing post title by ID."
+      . tags ["Posts"]
+      . paramDoc (pathParamDoc "id" "Post numeric ID")
       $ defaultRouteDoc
       )
   , RouteInfo
       (Just DELETE)
       (Capture "/api/posts/:id")
       ( summary "Delete a post"
-      . description "Removes the post record from SQLite by ID."
-      . tags ["07: State & Persistence (SQLite)"]
-      . paramDoc (pathParamDoc "id" "integer")
+      . description "Delete an existing post by ID."
+      . tags ["Posts"]
+      . paramDoc (pathParamDoc "id" "Post numeric ID")
       $ defaultRouteDoc
       )
   ]
-
