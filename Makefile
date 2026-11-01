@@ -34,3 +34,12 @@ lint: ## Lint all Haskell sources with HLint
 watch: ## Live test watcher using ghcid
 	@which ghcid >/dev/null 2>&1 && ghcid --command="cabal repl scotty-starter-test" --test=":main" || echo "ghcid not installed; please install via ghcup or nix"
 
+docker-build: ## Build production Docker container image
+	docker build -t scotty-starter:latest .
+
+docker-run: ## Run container locally via docker-compose
+	docker compose up --build
+
+preview-pages: ## Preview static GitHub Pages export locally on http://localhost:8080
+	python3 -m http.server 8080 --directory docs
+

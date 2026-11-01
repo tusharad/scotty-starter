@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scotty-starter
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - SCOTTY_ENV=development
+      - DATABASE_URL=sqlite:///app/data/scotty.db
+    volumes:
+      - scotty-data:/app/data
+      - ./static:/app/static:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  scotty-data:
+    name: scotty-data
+

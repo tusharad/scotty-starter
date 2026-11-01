@@ -48,3 +48,4 @@ cabal.sandbox.config
 .idea/
 .vscode/
 *.iml
+ROADMAP.md

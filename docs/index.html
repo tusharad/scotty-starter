@@ -1,0 +1,372 @@
+<!DOCTYPE HTML>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5"><meta name="description" content="Scotty Starter 2.0 - Production-Ready Haskell Web Application Starter"><title>Scotty Starter 2.0 // Haskell Web Engineering Studio</title><link rel="icon" href="./favicon.ico"><link rel="stylesheet" href="./css/pure.min.css"><link rel="stylesheet" href="./css/grids-responsive.min.css"><link rel="stylesheet" href="./css/style.css"><script src="./js/htmx.min.js"></script><script>document.addEventListener('htmx:beforeSwap', function(evt) {
+  evt.detail.shouldSwap = true;
+  evt.detail.isError = false;
+});
+document.addEventListener('htmx:afterOnLoad', function(evt) {
+  var target = evt.detail.target;
+  if (target && target.classList.contains('console-output')) {
+    try {
+      var parsed = JSON.parse(target.textContent);
+      target.textContent = JSON.stringify(parsed, null, 2);
+    } catch(e) {}
+  }
+});
+function switchTourTab(tabId) {
+  var navItems = document.querySelectorAll('.studio-nav-item');
+  var panes = document.querySelectorAll('.tour-pane');
+  for (var i = 0; i < navItems.length; i++) {
+    navItems[i].classList.remove('active');
+  }
+  for (var j = 0; j < panes.length; j++) {
+    panes[j].classList.remove('active');
+  }
+  var activeBtn = document.querySelector('[data-tab="' + tabId + '"]');
+  var activePane = document.getElementById('pane-' + tabId);
+  if (activeBtn) activeBtn.classList.add('active');
+  if (activePane) activePane.classList.add('active');
+}
+</script><script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(function(reg) {
+    console.log('Scotty SW registered with scope:', reg.scope);
+  }).catch(function(err) {
+    console.warn('SW registration failed:', err);
+  });
+}
+(function() {
+  if (window.__SCOTTY_MOCK_INSTALLED__) return;
+  window.__SCOTTY_MOCK_INSTALLED__ = true;
+
+  var clickCounter = 0;
+  var nextPostId = 3;
+  var posts = [
+    { id: 2, title: "Haskell in Production: Warp & WAI" },
+    { id: 1, title: "Getting Started with Scotty 0.30" }
+  ];
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function renderPost(post) {
+    return '<div class="post-card" id="post-' + post.id + '">
+' +
+      '<div class="post-info">
+' +
+      '<span class="post-id-chip">#' + post.id + '</span>
+' +
+      '<span class="post-title">' + escapeHtml(post.title) + '</span>
+' +
+      '</div>
+' +
+      '<button class="btn-del" hx-delete="./partials/posts/' + post.id + '" hx-target="#post-' + post.id + '" hx-swap="outerHTML" hx-confirm="Delete this record from SQLite database?">Delete</button>
+' +
+      '</div>';
+  }
+
+  function handleMock(method, urlStr, bodyStr) {
+    var url = new URL(urlStr, window.location.href);
+    var p = url.pathname;
+    method = method.toUpperCase();
+
+    // 1. Path Params
+    var m = p.match(/\/api\/tour\/path-params\/([^/]+)\/([^/]+)/);
+    if (m && method === 'GET') {
+      return { status: 200, ct: 'application/json; charset=utf-8', body: JSON.stringify({
+        concept: "Path Parameters",
+        category: decodeURIComponent(m[1]),
+        id: parseInt(m[2], 10) || m[2]
+      }, null, 2) };
+    }
+
+    // 2. Query Params
+    if (p.indexOf('/api/tour/query-params') !== -1 && method === 'GET') {
+      var raw = [];
+      url.searchParams.forEach(function(v, k) { raw.push([k, v]); });
+      var filter = url.searchParams.get('filter');
+      var limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit'), 10) : null;
+      return { status: 200, ct: 'application/json; charset=utf-8', body: JSON.stringify({
+        concept: "Query Parameters",
+        filter: filter,
+        limit: limit,
+        raw_queries: raw
+      }, null, 2) };
+    }
+
+    // 3. JSON body
+    if (p.indexOf('/api/tour/json-body') !== -1 && method === 'POST') {
+      try {
+        var parsed = JSON.parse(bodyStr || '{}');
+        return { status: 201, ct: 'application/json; charset=utf-8', body: JSON.stringify({
+          concept: "JSON Deserialization",
+          parsed: parsed
+        }, null, 2) };
+      } catch(e) {
+        return { status: 400, ct: 'application/problem+json; charset=utf-8', body: JSON.stringify({
+          type: "about:blank",
+          title: "Malformed JSON Request",
+          status: 400,
+          detail: e.message
+        }, null, 2) };
+      }
+    }
+
+    // 4. Form Params
+    if (p.indexOf('/api/tour/form-params') !== -1 && method === 'POST') {
+      var sp = new URLSearchParams(bodyStr || '');
+      return { status: 201, ct: 'application/json; charset=utf-8', body: JSON.stringify({
+        concept: "Form Data Parsing",
+        username: sp.get('username') || '',
+        email: sp.get('email') || '',
+        newsletter: sp.get('newsletter') ? true : null
+      }, null, 2) };
+    }
+
+    // 5. Headers & Cookies
+    if (p.indexOf('/api/tour/headers-and-cookies') !== -1 && method === 'GET') {
+      return { status: 200, ct: 'application/json; charset=utf-8', body: JSON.stringify({
+        concept: "Headers & Cookies",
+        user_agent: navigator.userAgent,
+        cookie: "visited=true"
+      }, null, 2) };
+    }
+
+    // 6. Status Codes
+    var scMatch = p.match(/\/api\/tour\/status-codes\/(\d+)/);
+    if (scMatch && method === 'GET') {
+      var code = parseInt(scMatch[1], 10);
+      if (code === 204) {
+        return { status: 204, ct: 'text/plain; charset=utf-8', body: '' };
+      }
+      return { status: code, ct: 'application/json; charset=utf-8', body: JSON.stringify({
+        concept: "Status Codes",
+        status_code: code
+      }, null, 2) };
+    }
+
+    // 7. Errors
+    var errMatch = p.match(/\/api\/tour\/errors\/([^/]+)/);
+    if (errMatch && method === 'GET') {
+      var errType = errMatch[1];
+      if (errType === 'missing-query') {
+        return { status: 400, ct: 'application/problem+json; charset=utf-8', body: JSON.stringify({
+          type: "about:blank",
+          title: "Missing Query Parameter",
+          status: 400,
+          detail: "Missing: required_param"
+        }, null, 2) };
+      } else {
+        return { status: 400, ct: 'application/problem+json; charset=utf-8', body: JSON.stringify({
+          type: "about:blank",
+          title: "Parameter Parse Failure",
+          status: 400,
+          detail: "Cannot parse: numeric_field (expected Int)"
+        }, null, 2) };
+      }
+    }
+
+    // 8. Health
+    if (p.indexOf('/healthz') !== -1) {
+      return { status: 200, ct: 'application/json; charset=utf-8', body: JSON.stringify({
+        status: "ok",
+        app: "scotty-starter",
+        version: "0.2.0",
+        runtime: "GHC 9.10.3 / Warp / GitHub Pages Static",
+        pool_stats: { available: 10, in_use: 0 }
+      }, null, 2) };
+    }
+
+    // 9. Counter
+    if (p.indexOf('/partials/counter') !== -1 && method === 'POST') {
+      clickCounter++;
+      return { status: 200, ct: 'text/html; charset=utf-8', body: '<button class="btn-secondary" id="counter-btn" hx-post="./partials/counter" hx-target="#counter-btn" hx-swap="outerHTML">Server Clicks: ' + clickCounter + ' ⚡</button>' };
+    }
+
+    // 10. Posts search
+    if (p.indexOf('/partials/posts/search') !== -1 && method === 'GET') {
+      var q = (url.searchParams.get('q') || '').toLowerCase();
+      var filtered = posts.filter(function(x) { return x.title.toLowerCase().indexOf(q) !== -1; });
+      var html = "";
+      if (filtered.length === 0) {
+        html = '<div style="grid-column: 1 / -1; padding: 2rem; text-align: center; color: var(--text-dim);">No matching SQLite records found for "' + escapeHtml(q) + '".</div>';
+      } else {
+        html = filtered.map(renderPost).join('
+');
+      }
+      return { status: 200, ct: 'text/html; charset=utf-8', body: html };
+    }
+
+    // 11. Add post
+    if (p.indexOf('/partials/posts') !== -1 && method === 'POST') {
+      var formP = new URLSearchParams(bodyStr || '');
+      var title = (formP.get('title') || 'Untitled Entry').trim();
+      var np = { id: nextPostId++, title: title };
+      posts.unshift(np);
+      return { status: 200, ct: 'text/html; charset=utf-8', body: renderPost(np) };
+    }
+
+    // 12. Delete post
+    var delMatch = p.match(/\/partials\/posts\/(\d+)/);
+    if (delMatch && method === 'DELETE') {
+      var delId = parseInt(delMatch[1], 10);
+      posts = posts.filter(function(x) { return x.id !== delId; });
+      return { status: 200, ct: 'text/html; charset=utf-8', body: '' };
+    }
+
+    return null;
+  }
+
+  var origOpen = XMLHttpRequest.prototype.open;
+  var origSend = XMLHttpRequest.prototype.send;
+
+  XMLHttpRequest.prototype.open = function(method, url) {
+    this._method = method;
+    this._url = url;
+    return origOpen.apply(this, arguments);
+  };
+
+  XMLHttpRequest.prototype.send = function(body) {
+    var self = this;
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      return origSend.apply(this, arguments);
+    }
+    var mock = handleMock(self._method, self._url, body);
+    if (mock) {
+      setTimeout(function() {
+        Object.defineProperty(self, 'readyState', { value: 4, writable: false });
+        Object.defineProperty(self, 'status', { value: mock.status, writable: false });
+        Object.defineProperty(self, 'statusText', { value: mock.status === 204 ? 'No Content' : 'OK', writable: false });
+        Object.defineProperty(self, 'responseText', { value: mock.body, writable: false });
+        Object.defineProperty(self, 'response', { value: mock.body, writable: false });
+        self.getResponseHeader = function(h) {
+          if (h.toLowerCase() === 'content-type') return mock.ct;
+          return null;
+        };
+        self.getAllResponseHeaders = function() {
+          return 'content-type: ' + mock.ct + '
+';
+        };
+        if (typeof self.onreadystatechange === 'function') self.onreadystatechange();
+        if (typeof self.onload === 'function') self.onload();
+      }, 30);
+      return;
+    }
+    return origSend.apply(this, arguments);
+  };
+
+  var origFetch = window.fetch;
+  window.fetch = function(input, init) {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      return origFetch.apply(this, arguments);
+    }
+    var urlStr = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+    var method = (init && init.method) || 'GET';
+    var body = (init && init.body) || '';
+    var mock = handleMock(method, urlStr, body);
+    if (mock) {
+      return Promise.resolve(new Response(mock.body, {
+        status: mock.status,
+        headers: { 'Content-Type': mock.ct }
+      }));
+    }
+    return origFetch.apply(this, arguments);
+  };
+})();
+</script></head><body><header class="topbar"><div class="topbar-inner"><div class="brand-wrapper"><a class="brand-badge" href="./"><span class="lambda-glyph">λ</span><span>SCOTTY // STARTER</span><span class="version-pill">v0.2.0</span></a><div class="status-pill"><span class="pulse-dot"></span><span>DEMO : STATIC EXPORT</span></div></div><div class="nav-cluster"><a class="nav-btn swagger-btn" href="./docs.html">⚡ Swagger UI</a><a class="nav-btn" href="./openapi.json">📜 OpenAPI JSON</a><a class="nav-btn" href="./healthz">🏥 Health</a><a class="nav-btn" href="https://github.com/scotty-web/scotty" target="_blank">Scotty 0.30 ↗</a></div></div></header><main class="workbench-container"><div class="masthead"><h1 class="masthead-title">Scotty Web Application Starter</h1><p class="masthead-sub">A modern, high-performance, battery-included web starter kit for Haskell. Designed for rapid scaffolding, featuring type-safe routing, connection pooling, SQLite migrations, automated OpenAPI 3.0, and reactive HTMX hypermedia.</p><div class="spec-strip"><span class="spec-chip"><strong>GHC </strong>9.10.3</span><span class="spec-chip"><strong>Scotty </strong>0.30</span><span class="spec-chip"><strong>Engine </strong>Warp (-threaded -N)</span><span class="spec-chip"><strong>OpenAPI </strong>3.0 (PR #438)</span><span class="spec-chip"><strong>DB </strong>SQLite3 + Pool</span><span class="spec-chip"><strong>UI </strong>HTMX 2.0</span><span class="spec-chip"><strong>Errors </strong>RFC 7807</span></div></div><div class="scaffold-grid"><div class="scaffold-card"><h3 class="scaffold-card-title"><span class="lambda-glyph">⚡</span><span>Developer CLI Workflow</span></h3><p class="scaffold-card-desc">Essential commands to run, test, and develop your project.</p><pre class="cli-cheatsheet"><span class="comment"># 1. Run server on http://localhost:3000
+</span><span class="cmd">$ cabal run scotty-starter
+
+</span><span class="comment"># 2. Run automated test suite (28 tests)
+</span><span class="cmd">$ cabal test --test-show-details=direct
+
+</span><span class="comment"># 3. Live reload on code changes
+</span><span class="cmd">$ make watch
+
+</span><span class="comment"># 4. Open interactive REPL
+</span><span class="cmd">$ cabal repl</span></pre></div><div class="scaffold-card"><h3 class="scaffold-card-title"><span class="lambda-glyph">📁</span><span>Project Layout Blueprint</span></h3><p class="scaffold-card-desc">Where to scaffold your routes, models, and views.</p><pre class="tree-list">scotty-starter/
+├── <strong>src/App.hs</strong>
+│   └── <span class="tag">App wiring &amp; middlewares
+</span>├── <strong>src/App/Api/</strong>
+│   └── <span class="tag">REST routes (Health, Posts, Tour)
+</span>├── <strong>src/App/Config.hs</strong>
+│   └── <span class="tag">Typed environment config
+</span>├── <strong>src/App/Database/</strong>
+│   └── <span class="tag">SQLite pool &amp; migrations
+</span>├── <strong>src/App/Docs.hs</strong>
+│   └── <span class="tag">OpenAPI 3.0 &amp; Swagger UI
+</span>└── <strong>src/Views/</strong>
+    └── <span class="tag">Blaze HTML5 &amp; HTMX views</span></pre></div></div><div class="swagger-banner"><div class="swagger-banner-content"><h3><span>⚡</span> Built-in Swagger UI &amp; OpenAPI 3.0 (PR #438)</h3><p>Every endpoint is declared with type-safe metadata combinators. Explore the interactive documentation via Swagger UI or consume the raw OpenAPI 3.0 specification.</p></div><div class="swagger-banner-actions"><a class="btn-primary" href="./docs.html">Launch Swagger UI (/docs) ↗</a><a class="btn-secondary" href="./openapi.json">View OpenAPI JSON</a></div></div><div class="section-header"><span class="section-num">§ 01</span><h2 class="section-title">Interactive Scotty 0.30 Feature Studio</h2></div><p class="section-desc">Select a topic below to inspect the syntax-highlighted Haskell implementation, adjust request parameters, and trigger real-time server responses.</p><div class="studio-container"><aside class="studio-sidebar"><button class="studio-nav-item active" data-tab="path-params" onclick="switchTourTab(&#39;path-params&#39;)"><span class="nav-label"><span class="nav-index">01</span><span>Path Parameters</span></span><span class="method-badge get">GET</span></button><button class="studio-nav-item" data-tab="query-params" onclick="switchTourTab(&#39;query-params&#39;)"><span class="nav-label"><span class="nav-index">02</span><span>Query Parameters</span></span><span class="method-badge get">GET</span></button><button class="studio-nav-item" data-tab="json-body" onclick="switchTourTab(&#39;json-body&#39;)"><span class="nav-label"><span class="nav-index">03</span><span>JSON Request Body</span></span><span class="method-badge post">POST</span></button><button class="studio-nav-item" data-tab="form-params" onclick="switchTourTab(&#39;form-params&#39;)"><span class="nav-label"><span class="nav-index">04</span><span>Form Submissions</span></span><span class="method-badge post">POST</span></button><button class="studio-nav-item" data-tab="headers-cookies" onclick="switchTourTab(&#39;headers-cookies&#39;)"><span class="nav-label"><span class="nav-index">05</span><span>Headers &amp; Cookies</span></span><span class="method-badge get">GET</span></button><button class="studio-nav-item" data-tab="status-codes" onclick="switchTourTab(&#39;status-codes&#39;)"><span class="nav-label"><span class="nav-index">06</span><span>HTTP Status Codes</span></span><span class="method-badge get">GET</span></button><button class="studio-nav-item" data-tab="error-handling" onclick="switchTourTab(&#39;error-handling&#39;)"><span class="nav-label"><span class="nav-index">07</span><span>RFC 7807 Errors</span></span><span class="method-badge err">ERR</span></button><button class="studio-nav-item" data-tab="redirection" onclick="switchTourTab(&#39;redirection&#39;)"><span class="nav-label"><span class="nav-index">08</span><span>Redirection</span></span><span class="method-badge redir">302</span></button></aside><div class="studio-stage"><div id="pane-path-params" class="tour-pane active"><div class="pane-header"><div class="pane-route"><span class="method-badge get">GET</span><span>/api/tour/path-params/:category/:id</span></div><h3 class="pane-title">Typed URL Path Parameters</h3><p class="pane-description">Scotty captures URL pattern variables designated with a colon (e.g. :category, :id) and parses them automatically into Haskell types (Text, Int, UUID). If parsing fails, Scotty throws a parse error handled centrally.</p></div><div class="studio-work-area"><div class="code-window"><div class="window-bar"><div class="window-dots"><span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span></div><span>src/App/Api/Tour.hs</span><span>Scotty 0.30 DSL</span></div><pre class="code-snippet"><span class="syn-fn">S.get</span> <span class="syn-str">&quot;/api/tour/path-params/:category/:id&quot;</span> <span class="syn-kw">$</span> <span class="syn-kw">do</span>
+  category <span class="syn-kw">&lt;-</span> <span class="syn-fn">S.pathParam</span> <span class="syn-str">&quot;category&quot;</span> <span class="syn-kw">::</span> <span class="syn-type">ActionT</span> <span class="syn-type">AppM</span> <span class="syn-type">Text</span>
+  itemId   <span class="syn-kw">&lt;-</span> <span class="syn-fn">S.pathParam</span> <span class="syn-str">&quot;id&quot;</span>       <span class="syn-kw">::</span> <span class="syn-type">ActionT</span> <span class="syn-type">AppM</span> <span class="syn-type">Int</span>
+
+  <span class="syn-fn">S.status</span> <span class="syn-fn">status200</span>
+  <span class="syn-fn">S.json</span> <span class="syn-kw">$</span> <span class="syn-fn">object</span>
+    [ <span class="syn-str">&quot;concept&quot;</span>  <span class="syn-fn">.=</span> (<span class="syn-str">&quot;Path Parameters&quot;</span> <span class="syn-kw">::</span> <span class="syn-type">Text</span>)
+    , <span class="syn-str">&quot;category&quot;</span> <span class="syn-fn">.=</span> category
+    , <span class="syn-str">&quot;id&quot;</span>       <span class="syn-fn">.=</span> itemId
+    ]</pre></div><div class="test-panel"><div class="control-box"><span class="control-box-title">Test Presets</span><div class="preset-buttons"><button class="btn-preset" hx-get="./api/tour/path-params/books/42" hx-target="#console-path">GET /books/42</button><button class="btn-preset" hx-get="./api/tour/path-params/haskell/2026" hx-target="#console-path">GET /haskell/2026</button><button class="btn-preset" hx-get="./api/tour/path-params/fp-starters/7" hx-target="#console-path">GET /fp-starters/7</button></div></div><div class="console-box"><div class="console-bar"><span>SERVER RESPONSE</span><span>JSON</span></div><pre id="console-path" class="console-output">Select a preset above to execute S.pathParam query...</pre></div></div></div></div><div id="pane-query-params" class="tour-pane"><div class="pane-header"><div class="pane-route"><span class="method-badge get">GET</span><span>/api/tour/query-params?filter=...&amp;limit=...</span></div><h3 class="pane-title">Optional &amp; Required Query Parameters</h3><p class="pane-description">Scotty provides S.queryParam for required parameters (throwing QueryParameterNotFound if absent), S.queryParamMaybe for optional parameters (returning Maybe a), and S.queryParams for raw key-value pairs.</p></div><div class="studio-work-area"><div class="code-window"><div class="window-bar"><div class="window-dots"><span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span></div><span>src/App/Api/Tour.hs</span><span>Scotty 0.30 DSL</span></div><pre class="code-snippet"><span class="syn-fn">S.get</span> <span class="syn-str">&quot;/api/tour/query-params&quot;</span> <span class="syn-kw">$</span> <span class="syn-kw">do</span>
+  filterVal  <span class="syn-kw">&lt;-</span> <span class="syn-fn">S.queryParamMaybe</span> <span class="syn-str">&quot;filter&quot;</span> <span class="syn-kw">::</span> <span class="syn-type">ActionT</span> <span class="syn-type">AppM</span> (<span class="syn-type">Maybe</span> <span class="syn-type">Text</span>)
+  limitVal   <span class="syn-kw">&lt;-</span> <span class="syn-fn">S.queryParamMaybe</span> <span class="syn-str">&quot;limit&quot;</span>  <span class="syn-kw">::</span> <span class="syn-type">ActionT</span> <span class="syn-type">AppM</span> (<span class="syn-type">Maybe</span> <span class="syn-type">Int</span>)
+  rawQueries <span class="syn-kw">&lt;-</span> <span class="syn-fn">S.queryParams</span>
+
+  <span class="syn-fn">S.status</span> <span class="syn-fn">status200</span>
+  <span class="syn-fn">S.json</span> <span class="syn-kw">$</span> <span class="syn-fn">object</span>
+    [ <span class="syn-str">&quot;concept&quot;</span>     <span class="syn-fn">.=</span> (<span class="syn-str">&quot;Query Parameters&quot;</span> <span class="syn-kw">::</span> <span class="syn-type">Text</span>)
+    , <span class="syn-str">&quot;filter&quot;</span>      <span class="syn-fn">.=</span> filterVal
+    , <span class="syn-str">&quot;limit&quot;</span>       <span class="syn-fn">.=</span> limitVal
+    , <span class="syn-str">&quot;raw_queries&quot;</span> <span class="syn-fn">.=</span> rawQueries
+    ]</pre></div><div class="test-panel"><div class="control-box"><span class="control-box-title">Test Presets</span><div class="preset-buttons"><button class="btn-preset" hx-get="./api/tour/query-params?filter=functional&amp;limit=5&amp;active=true" hx-target="#console-query">?filter=functional&amp;limit=5&amp;active=true</button><button class="btn-preset" hx-get="./api/tour/query-params?filter=haskell&amp;limit=2" hx-target="#console-query">?filter=haskell&amp;limit=2</button><button class="btn-preset" hx-get="./api/tour/query-params" hx-target="#console-query">Default (No query params)</button></div></div><div class="console-box"><div class="console-bar"><span>SERVER RESPONSE</span><span>JSON</span></div><pre id="console-query" class="console-output">Select a preset above to test query parameter parsing...</pre></div></div></div></div><div id="pane-json-body" class="tour-pane"><div class="pane-header"><div class="pane-route"><span class="method-badge post">POST</span><span>/api/tour/json-body</span></div><h3 class="pane-title">Typed JSON Deserialization via Aeson</h3><p class="pane-description">Using S.jsonData, Scotty streams and deserializes incoming JSON payloads directly into strongly-typed Haskell data records. Malformed JSON automatically triggers the centralized RFC 7807 error handler.</p></div><div class="studio-work-area"><div class="code-window"><div class="window-bar"><div class="window-dots"><span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span></div><span>src/App/Api/Tour.hs</span><span>Scotty 0.30 DSL</span></div><pre class="code-snippet"><span class="syn-kw">data</span> <span class="syn-type">TourPayload</span> <span class="syn-kw">=</span> <span class="syn-type">TourPayload</span>
+  { name   <span class="syn-kw">::</span> <span class="syn-kw">!</span><span class="syn-type">Text</span>
+  , role   <span class="syn-kw">::</span> <span class="syn-kw">!</span><span class="syn-type">Text</span>
+  , skills <span class="syn-kw">::</span> <span class="syn-kw">![</span><span class="syn-type">Text</span>]
+  } <span class="syn-kw">deriving</span> (<span class="syn-type">Generic</span>, <span class="syn-type">FromJSON</span>, <span class="syn-type">ToJSON</span>)
+
+<span class="syn-fn">S.post</span> <span class="syn-str">&quot;/api/tour/json-body&quot;</span> <span class="syn-kw">$</span> <span class="syn-kw">do</span>
+  payload <span class="syn-kw">&lt;-</span> <span class="syn-fn">S.jsonData</span> <span class="syn-kw">::</span> <span class="syn-type">ActionT</span> <span class="syn-type">AppM</span> <span class="syn-type">TourPayload</span>
+  <span class="syn-fn">S.status</span> <span class="syn-fn">status201</span>
+  <span class="syn-fn">S.json</span> <span class="syn-kw">$</span> <span class="syn-fn">object</span>
+    [ <span class="syn-str">&quot;concept&quot;</span> <span class="syn-fn">.=</span> (<span class="syn-str">&quot;JSON Deserialization&quot;</span> <span class="syn-kw">::</span> <span class="syn-type">Text</span>)
+    , <span class="syn-str">&quot;parsed&quot;</span>  <span class="syn-fn">.=</span> payload
+    ]</pre></div><div class="test-panel"><div class="control-box"><span class="control-box-title">Test Payloads</span><div class="preset-buttons"><button class="btn-primary" onclick="fetch(&#39;/api/tour/json-body&#39;, {method: &#39;POST&#39;, headers: {&#39;Content-Type&#39;: &#39;application/json&#39;}, body: JSON.stringify({name: &#39;Alonzo Church&#39;, role: &#39;Logician&#39;, skills: [&#39;Lambda Calculus&#39;, &#39;Type Theory&#39;]})}).then(r =&gt; r.json()).then(d =&gt; { document.getElementById(&#39;console-json&#39;).textContent = JSON.stringify(d, null, 2); })">POST Alonzo Church</button><button class="btn-secondary" onclick="fetch(&#39;/api/tour/json-body&#39;, {method: &#39;POST&#39;, headers: {&#39;Content-Type&#39;: &#39;application/json&#39;}, body: JSON.stringify({name: &#39;Ada Lovelace&#39;, role: &#39;Architect&#39;, skills: [&#39;Analytical Engine&#39;, &#39;Concurrency&#39;]})}).then(r =&gt; r.json()).then(d =&gt; { document.getElementById(&#39;console-json&#39;).textContent = JSON.stringify(d, null, 2); })">POST Ada Lovelace</button></div></div><div class="console-box"><div class="console-bar"><span>SERVER RESPONSE</span><span>JSON</span></div><pre id="console-json" class="console-output">Click a payload button to POST typed JSON to S.jsonData...</pre></div></div></div></div><div id="pane-form-params" class="tour-pane"><div class="pane-header"><div class="pane-route"><span class="method-badge post">POST</span><span>/api/tour/form-params</span></div><h3 class="pane-title">URL-Encoded Multipart Form Processing</h3><p class="pane-description">Scotty handles standard HTML form body submissions seamlessly using S.formParam and S.formParamMaybe, converting form fields into typed Haskell variables.</p></div><div class="studio-work-area"><div class="code-window"><div class="window-bar"><div class="window-dots"><span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span></div><span>src/App/Api/Tour.hs</span><span>Scotty 0.30 DSL</span></div><pre class="code-snippet"><span class="syn-fn">S.post</span> <span class="syn-str">&quot;/api/tour/form-params&quot;</span> <span class="syn-kw">$</span> <span class="syn-kw">do</span>
+  uname <span class="syn-kw">&lt;-</span> <span class="syn-fn">S.formParam</span> <span class="syn-str">&quot;username&quot;</span>   <span class="syn-kw">::</span> <span class="syn-type">ActionT</span> <span class="syn-type">AppM</span> <span class="syn-type">Text</span>
+  email <span class="syn-kw">&lt;-</span> <span class="syn-fn">S.formParam</span> <span class="syn-str">&quot;email&quot;</span>      <span class="syn-kw">::</span> <span class="syn-type">ActionT</span> <span class="syn-type">AppM</span> <span class="syn-type">Text</span>
+  news  <span class="syn-kw">&lt;-</span> <span class="syn-fn">S.formParamMaybe</span> <span class="syn-str">&quot;newsletter&quot;</span> <span class="syn-kw">::</span> <span class="syn-type">ActionT</span> <span class="syn-type">AppM</span> (<span class="syn-type">Maybe</span> <span class="syn-type">Bool</span>)
+
+  <span class="syn-fn">S.status</span> <span class="syn-fn">status201</span>
+  <span class="syn-fn">S.json</span> <span class="syn-kw">$</span> <span class="syn-fn">object</span>
+    [ <span class="syn-str">&quot;concept&quot;</span>    <span class="syn-fn">.=</span> (<span class="syn-str">&quot;Form Data Parsing&quot;</span> <span class="syn-kw">::</span> <span class="syn-type">Text</span>)
+    , <span class="syn-str">&quot;username&quot;</span>   <span class="syn-fn">.=</span> uname
+    , <span class="syn-str">&quot;email&quot;</span>      <span class="syn-fn">.=</span> email
+    , <span class="syn-str">&quot;newsletter&quot;</span> <span class="syn-fn">.=</span> news
+    ]</pre></div><div class="test-panel"><div class="control-box"><span class="control-box-title">Interactive Form</span><form class="form-row" hx-post="./api/tour/form-params" hx-target="#console-form"><input type="text" name="username" class="form-input" placeholder="Username" value="simon_pj"><input type="email" name="email" class="form-input" placeholder="Email" value="simon@ghc.dev"><button type="submit" class="btn-primary">Submit Form</button></form></div><div class="console-box"><div class="console-bar"><span>SERVER RESPONSE</span><span>JSON</span></div><pre id="console-form" class="console-output">Submit the form above to inspect S.formParam extraction...</pre></div></div></div></div><div id="pane-headers-cookies" class="tour-pane"><div class="pane-header"><div class="pane-route"><span class="method-badge get">GET</span><span>/api/tour/headers-and-cookies</span></div><h3 class="pane-title">Request Headers &amp; Cookie Management</h3><p class="pane-description">Read incoming request headers (S.header), inspect client cookies (getCookie), set custom response headers (S.setHeader), and set cookies with ease.</p></div><div class="studio-work-area"><div class="code-window"><div class="window-bar"><div class="window-dots"><span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span></div><span>src/App/Api/Tour.hs</span><span>Scotty 0.30 DSL</span></div><pre class="code-snippet"><span class="syn-fn">S.get</span> <span class="syn-str">&quot;/api/tour/headers-and-cookies&quot;</span> <span class="syn-kw">$</span> <span class="syn-kw">do</span>
+  ua &lt;- <span class="syn-fn">S.header</span> <span class="syn-str">&quot;User-Agent&quot;</span>
+  c  &lt;- <span class="syn-fn">getCookie</span> <span class="syn-str">&quot;visited&quot;</span>
+
+  <span class="syn-cm">-- Set custom response header and cookie
+</span>  <span class="syn-fn">S.setHeader</span> <span class="syn-str">&quot;X-Scotty-Powered-By&quot;</span> <span class="syn-str">&quot;Scotty 0.30 (Haskell)&quot;</span>
+  <span class="syn-fn">setSimpleCookie</span> <span class="syn-str">&quot;visited&quot;</span> <span class="syn-str">&quot;true&quot;</span>
+
+  <span class="syn-fn">S.status</span> <span class="syn-fn">status200</span>
+  <span class="syn-fn">S.json</span> <span class="syn-kw">$</span> <span class="syn-fn">object</span>
+    [ <span class="syn-str">&quot;concept&quot;</span>    <span class="syn-fn">.=</span> (<span class="syn-str">&quot;Headers &amp; Cookies&quot;</span> <span class="syn-kw">::</span> <span class="syn-type">Text</span>)
+    , <span class="syn-str">&quot;user_agent&quot;</span> <span class="syn-fn">.=</span> (<span class="syn-fn">fmap</span> <span class="syn-fn">TL.toStrict</span> ua)
+    , <span class="syn-str">&quot;cookie&quot;</span>     <span class="syn-fn">.=</span> c
+    ]</pre></div><div class="test-panel"><div class="control-box"><span class="control-box-title">Test Controls</span><div class="preset-buttons"><button class="btn-primary" hx-get="./api/tour/headers-and-cookies" hx-target="#console-headers">Send Request &amp; Issue Cookie</button></div></div><div class="console-box"><div class="console-bar"><span>SERVER RESPONSE</span><span>JSON</span></div><pre id="console-headers" class="console-output">Click above to read client headers and set response cookie...</pre></div></div></div></div><div id="pane-status-codes" class="tour-pane"><div class="pane-header"><div class="pane-route"><span class="method-badge get">GET</span><span>/api/tour/status-codes/:code</span></div><h3 class="pane-title">Dynamic HTTP Response Status Codes</h3><p class="pane-description">Scotty allows returning any valid HTTP status code dynamically via S.status and Network.HTTP.Types.Status.mkStatus.</p></div><div class="studio-work-area"><div class="code-window"><div class="window-bar"><div class="window-dots"><span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span></div><span>src/App/Api/Tour.hs</span><span>Scotty 0.30 DSL</span></div><pre class="code-snippet"><span class="syn-fn">S.get</span> <span class="syn-str">&quot;/api/tour/status-codes/:code&quot;</span> <span class="syn-kw">$</span> <span class="syn-kw">do</span>
+  codeInt <span class="syn-kw">&lt;-</span> <span class="syn-fn">S.pathParam</span> <span class="syn-str">&quot;code&quot;</span> <span class="syn-kw">::</span> <span class="syn-type">ActionT</span> <span class="syn-type">AppM</span> <span class="syn-type">Int</span>
+  <span class="syn-kw">let</span> sc = <span class="syn-fn">mkStatus</span> codeInt <span class="syn-str">&quot;Custom Status&quot;</span>
+
+  <span class="syn-fn">S.status</span> sc
+  <span class="syn-kw">if</span> codeInt <span class="syn-kw">==</span> <span class="syn-num">204</span>
+    <span class="syn-kw">then</span> <span class="syn-fn">S.raw</span> <span class="syn-str">&quot;&quot;</span>
+    <span class="syn-kw">else</span> <span class="syn-fn">S.json</span> <span class="syn-kw">$</span> <span class="syn-fn">object</span>
+      [ <span class="syn-str">&quot;concept&quot;</span>     <span class="syn-fn">.=</span> (<span class="syn-str">&quot;Status Codes&quot;</span> <span class="syn-kw">::</span> <span class="syn-type">Text</span>)
+      , <span class="syn-str">&quot;status_code&quot;</span> <span class="syn-fn">.=</span> codeInt
+      ]</pre></div><div class="test-panel"><div class="control-box"><span class="control-box-title">Select Status Code</span><div class="preset-buttons"><button class="btn-preset" hx-get="./api/tour/status-codes/200" hx-target="#console-status">200 OK</button><button class="btn-preset" hx-get="./api/tour/status-codes/201" hx-target="#console-status">201 Created</button><button class="btn-preset" hx-get="./api/tour/status-codes/204" hx-target="#console-status">204 No Content</button><button class="btn-preset" hx-get="./api/tour/status-codes/400" hx-target="#console-status">400 Bad Request</button><button class="btn-preset" hx-get="./api/tour/status-codes/404" hx-target="#console-status">404 Not Found</button><button class="btn-preset" hx-get="./api/tour/status-codes/418" hx-target="#console-status">418 I&#39;m a Teapot</button></div></div><div class="console-box"><div class="console-bar"><span>SERVER RESPONSE</span><span>STATUS TEST</span></div><pre id="console-status" class="console-output">Select a status code to test S.status dispatch...</pre></div></div></div></div><div id="pane-error-handling" class="tour-pane"><div class="pane-header"><div class="pane-route"><span class="method-badge err">ERR</span><span>/api/tour/errors/:type</span></div><h3 class="pane-title">Centralized Error Boundaries &amp; RFC 7807</h3><p class="pane-description">Scotty provides S.defaultHandler to catch unhandled exceptions. In Scotty Starter 2.0, this converts errors into standard RFC 7807 Problem Details (application/problem+json) with titles, status codes, and diagnostics.</p></div><div class="studio-work-area"><div class="code-window"><div class="window-bar"><div class="window-dots"><span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span></div><span>src/App/Middleware/ErrorHandler.hs</span><span>Scotty 0.30 DSL</span></div><pre class="code-snippet"><span class="syn-type">appErrorHandler</span> <span class="syn-kw">::</span> <span class="syn-type">ScottyException</span> <span class="syn-kw">-&gt;</span> <span class="syn-type">ActionT</span> m ()
+<span class="syn-type">appErrorHandler</span> <span class="syn-kw">=</span> <span class="syn-kw">\case</span>
+  <span class="syn-type">QueryParameterNotFound</span> p <span class="syn-kw">-&gt;</span>
+    <span class="syn-fn">rfc7807</span> <span class="syn-fn">status400</span> <span class="syn-str">&quot;Missing Query Parameter&quot;</span> (<span class="syn-str">&quot;Missing: &quot;</span> <span class="syn-fn">&lt;&gt;</span> p)
+  <span class="syn-type">FailedToParseParameter</span> p <span class="syn-kw">-&gt;</span>
+    <span class="syn-fn">rfc7807</span> <span class="syn-fn">status400</span> <span class="syn-str">&quot;Parameter Parse Failure&quot;</span> (<span class="syn-str">&quot;Cannot parse: &quot;</span> <span class="syn-fn">&lt;&gt;</span> p)
+  other <span class="syn-kw">-&gt;</span>
+    <span class="syn-fn">rfc7807</span> <span class="syn-fn">status500</span> <span class="syn-str">&quot;Internal Server Error&quot;</span> (<span class="syn-fn">T.pack</span> (<span class="syn-fn">show</span> other))</pre></div><div class="test-panel"><div class="control-box"><span class="control-box-title">Trigger Errors Deliberately</span><div class="preset-buttons"><button class="btn-preset" hx-get="./api/tour/errors/missing-query" hx-target="#console-errors">Trigger Missing Query</button><button class="btn-preset" hx-get="./api/tour/errors/bad-int?numeric_field=not_an_int" hx-target="#console-errors">Trigger Bad Int Parse</button></div></div><div class="console-box"><div class="console-bar"><span>SERVER RESPONSE</span><span>RFC 7807</span></div><pre id="console-errors" class="console-output">Trigger an exception to inspect the RFC 7807 Problem Details payload...</pre></div></div></div></div><div id="pane-redirection" class="tour-pane"><div class="pane-header"><div class="pane-route"><span class="method-badge redir">302</span><span>/api/tour/redirect-to-docs</span></div><h3 class="pane-title">HTTP Redirection via S.redirect</h3><p class="pane-description">Scotty provides S.redirect to issue 302 Found HTTP redirects to internal or external URLs.</p></div><div class="studio-work-area"><div class="code-window"><div class="window-bar"><div class="window-dots"><span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span></div><span>src/App/Api/Tour.hs</span><span>Scotty 0.30 DSL</span></div><pre class="code-snippet"><span class="syn-fn">S.get</span> <span class="syn-str">&quot;/api/tour/redirect-to-docs&quot;</span> <span class="syn-kw">$</span> <span class="syn-kw">do</span>
+  <span class="syn-cm">-- Issues HTTP 302 Found with Location: /docs
+</span>  <span class="syn-fn">S.redirect</span> <span class="syn-str">&quot;/docs&quot;</span></pre></div><div class="test-panel"><div class="control-box"><span class="control-box-title">Execute Redirection</span><div class="preset-buttons"><a class="btn-primary" href="./docs.html">Execute S.redirect to /docs ↗</a></div></div><div class="console-box"><div class="console-bar"><span>NOTES</span><span>302 FOUND</span></div><pre class="console-output">Clicking the button above navigates to /api/tour/redirect-to-docs, which dispatches S.redirect &quot;/docs&quot;.</pre></div></div></div></div></div></div><div class="section-header"><span class="section-num">§ 02</span><h2 class="section-title">Database Persistence &amp; Reactive Hypermedia</h2></div><p class="section-desc">Pooled SQLite access (resource-pool) combined with HTMX hypermedia. Real-time search, inline record creation, and optimistic deletion without single-page framework overhead.</p><div class="database-section"><div class="db-toolbar"><input type="search" name="q" class="form-input" placeholder="Search SQLite database in real-time..." autocomplete="off" hx-get="./partials/posts/search" hx-trigger="keyup changed delay:150ms, search" hx-target="#posts-container"><form class="form-row" hx-post="./partials/posts" hx-target="#posts-container" hx-swap="afterbegin" hx-on::after-request="if(event.detail.successful) this.reset()"><input type="text" name="title" class="form-input" placeholder="New post title..." required="true"><button type="submit" class="btn-primary">+ Add Post</button><button class="btn-secondary" id="counter-btn" hx-post="./partials/counter" hx-target="#counter-btn" hx-swap="outerHTML">Server Clicks: 0 ⚡</button></form></div><div id="posts-container" class="posts-list"><div class="post-card" id="post-2"><div class="post-info"><span class="post-id-chip">#2</span><span class="post-title">Haskell in Production: Warp &amp; WAI</span></div><button class="btn-del" hx-delete="./partials/posts/2" hx-target="#post-2" hx-swap="outerHTML" hx-confirm="Delete this record from SQLite database?">Delete</button></div><div class="post-card" id="post-1"><div class="post-info"><span class="post-id-chip">#1</span><span class="post-title">Getting Started with Scotty 0.30</span></div><button class="btn-del" hx-delete="./partials/posts/1" hx-target="#post-1" hx-swap="outerHTML" hx-confirm="Delete this record from SQLite database?">Delete</button></div></div></div></main><footer><p>SCOTTY STARTER 2.0 • HASKELL WEB ENGINEERING STUDIO • GHC 9.10 • SCOTTY 0.30 • WARP • SQLITE • HTMX 2.0</p></footer></body></html>

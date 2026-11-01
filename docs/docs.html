@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scotty Starter API - Swagger UI</title>
+  <link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+  <style>
+    html { box-sizing: border-box; overflow-y: scroll; }
+    *, *:before, *:after { box-sizing: inherit; }
+    body { margin: 0; background: #0a0c10; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .top-nav {
+      background: #0f131a;
+      border-bottom: 1px solid #1f2735;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .top-nav a {
+      color: #38bdf8;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .top-nav a:hover {
+      text-decoration: underline;
+    }
+    .swagger-ui .topbar { display: none; }
+    .swagger-ui { filter: invert(88%) hue-rotate(180deg); max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+    .swagger-ui .highlight-code { filter: invert(100%) hue-rotate(180deg); }
+  </style>
+</head>
+<body>
+  <div class="top-nav">
+    <a href="./">← Back to Scotty Starter Studio</a>
+    <span style="color: #94a3b8; font-size: 0.85rem;">OpenAPI 3.0 / Scotty 0.30</span>
+  </div>
+  <div id="swagger-ui"></div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    window.onload = function() {
+      window.ui = SwaggerUIBundle({
+        url: './openapi.json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIBundle.SwaggerUIStandalonePreset
+        ],
+        layout: 'BaseLayout'
+      });
+    };
+  </script>
+</body>
+</html>
