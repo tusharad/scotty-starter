@@ -7,34 +7,47 @@ module App
     , runAppWithPort
     , runAppWithConfig
     , defaultTestApp
+    , allRouteDocs
     ) where
 
-import           App.Api.Health                       (healthRoutes)
-import           App.Api.Posts                        (postsRoutes)
+import           App.Api.Health                       (healthRouteDocs,
+                                                       healthRoutes)
+import           App.Api.Posts                        (postsRouteDocs,
+                                                       postsRoutes)
+import           App.Api.Tour                         (tourRouteDocs,
+                                                       tourRoutes)
 import           App.Config                           (Config (..),
                                                        Environment (..),
                                                        loadConfig)
 import           App.Context                          (AppContext (..),
                                                        AppRoute, initContext,
                                                        runAppM)
+import           App.Docs                             (RouteInfo,
+                                                       defaultDocsConfig,
+                                                       docsRoutes)
 import           App.Middleware.ErrorHandler          (appErrorHandler)
-import           Controllers.Home                     (home, login)
+import           Controllers.Home                     (homeRoutes)
 import           Network.Wai                          (Application)
 import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import           Network.Wai.Middleware.Static        (addBase, noDots,
                                                        staticPolicy, (>->))
 import qualified Web.Scotty.Trans                     as S
 
+-- | Aggregate documentation metadata for all registered application endpoints.
+allRouteDocs :: [RouteInfo]
+allRouteDocs = healthRouteDocs ++ postsRouteDocs ++ tourRouteDocs
+
 -- | The core Scotty application specification (middleware + routes).
 app :: AppRoute
 app = do
   S.defaultHandler appErrorHandler
-  S.middleware $ staticPolicy (noDots >-> addBase "static/images")
+  S.middleware $ staticPolicy (noDots >-> addBase "static")
   S.middleware logStdoutDev
-  home
-  login
+  homeRoutes
   healthRoutes
   postsRoutes
+  tourRoutes
+  docsRoutes defaultDocsConfig allRouteDocs
 
 -- | Build a WAI Application using the provided AppContext.
 makeApp :: AppContext -> IO Application

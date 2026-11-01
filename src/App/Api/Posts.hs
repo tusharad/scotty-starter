@@ -5,10 +5,15 @@ module App.Api.Posts
     ( Post (..)
     , CreatePostRequest (..)
     , postsRoutes
+    , postsRouteDocs
     ) where
 
 import           App.Context               (AppContext (..), AppM, AppRoute)
 import           App.Database              (runDb)
+import           App.Docs                  (RouteInfo (..), defaultRouteDoc,
+                                            description, paramDoc,
+                                            pathParamDoc, queryParamDoc,
+                                            summary, tags)
 import           Control.Monad.IO.Class    (liftIO)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Reader (ask)
@@ -19,7 +24,9 @@ import           Database.SQLite.Simple    (FromRow (..), Only (..),
                                             field, lastInsertRowId, query,
                                             query_)
 import           GHC.Generics              (Generic)
+import           Network.HTTP.Types        (StdMethod (..))
 import           Network.HTTP.Types.Status (status200, status201, status404)
+import           Web.Scotty.Internal.Types (RoutePattern (..))
 import qualified Web.Scotty.Trans          as S
 
 data Post = Post
@@ -123,3 +130,53 @@ postsRoutes = do
       else do
         S.status status404
         S.json ("Post not found" :: Text)
+
+-- | Route documentation for Swagger UI / OpenAPI.
+postsRouteDocs :: [RouteInfo]
+postsRouteDocs =
+  [ RouteInfo
+      (Just GET)
+      (Literal "/api/posts")
+      ( summary "List all posts"
+      . description "Fetches posts from SQLite with optional case-insensitive substring search via ?q=..."
+      . tags ["07: State & Persistence (SQLite)"]
+      . paramDoc (queryParamDoc "q" "string" False)
+      $ defaultRouteDoc
+      )
+  , RouteInfo
+      (Just GET)
+      (Capture "/api/posts/:id")
+      ( summary "Fetch post by ID"
+      . description "Queries SQLite for a post matching the primary key :id."
+      . tags ["07: State & Persistence (SQLite)"]
+      . paramDoc (pathParamDoc "id" "integer")
+      $ defaultRouteDoc
+      )
+  , RouteInfo
+      (Just POST)
+      (Literal "/api/posts")
+      ( summary "Create a new post"
+      . description "Inserts a new post record into SQLite and returns the created post with auto-increment ID."
+      . tags ["07: State & Persistence (SQLite)"]
+      $ defaultRouteDoc
+      )
+  , RouteInfo
+      (Just PUT)
+      (Capture "/api/posts/:id")
+      ( summary "Update a post"
+      . description "Updates the title of an existing post in SQLite."
+      . tags ["07: State & Persistence (SQLite)"]
+      . paramDoc (pathParamDoc "id" "integer")
+      $ defaultRouteDoc
+      )
+  , RouteInfo
+      (Just DELETE)
+      (Capture "/api/posts/:id")
+      ( summary "Delete a post"
+      . description "Removes the post record from SQLite by ID."
+      . tags ["07: State & Persistence (SQLite)"]
+      . paramDoc (pathParamDoc "id" "integer")
+      $ defaultRouteDoc
+      )
+  ]
+

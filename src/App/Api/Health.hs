@@ -3,6 +3,7 @@
 
 module App.Api.Health
     ( healthRoutes
+    , healthRouteDocs
     , HealthStatus (..)
     , ReadinessStatus (..)
     ) where
@@ -10,6 +11,8 @@ module App.Api.Health
 import           App.Config                 (Config (..))
 import           App.Context                (AppContext (..), AppRoute)
 import           App.Database               (pingDb)
+import           App.Docs                   (RouteInfo (..), defaultRouteDoc,
+                                             description, summary, tags)
 import           Control.Monad.IO.Class     (liftIO)
 import           Control.Monad.Trans.Class  (lift)
 import           Control.Monad.Trans.Reader (ask)
@@ -19,7 +22,9 @@ import           Data.Text                  (Text)
 import qualified Data.Text                  as T
 import           Data.Time.Clock            (diffUTCTime, getCurrentTime)
 import           GHC.Generics               (Generic)
+import           Network.HTTP.Types         (StdMethod (..))
 import           Network.HTTP.Types.Status  (status200, status503)
+import           Web.Scotty.Internal.Types  (RoutePattern (..))
 import qualified Web.Scotty.Trans           as S
 
 data HealthStatus = HealthStatus
@@ -71,3 +76,24 @@ healthRoutes = do
       else do
         S.status status503
         S.json $ ReadinessStatus "unavailable" checks
+
+-- | Route documentation for Swagger UI / OpenAPI.
+healthRouteDocs :: [RouteInfo]
+healthRouteDocs =
+  [ RouteInfo
+      (Just GET)
+      (Literal "/healthz")
+      ( summary "Liveness health probe"
+      . description "Returns 200 OK with server uptime, environment name, and version."
+      . tags ["08: Operational Probes"]
+      $ defaultRouteDoc
+      )
+  , RouteInfo
+      (Just GET)
+      (Literal "/readyz")
+      ( summary "Readiness probe"
+      . description "Verifies application subsystems and runs a live ping query against the SQLite database pool."
+      . tags ["08: Operational Probes"]
+      $ defaultRouteDoc
+      )
+  ]

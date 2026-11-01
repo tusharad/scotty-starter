@@ -23,14 +23,17 @@ library
   exposed-modules:     App
                        App.Api.Health
                        App.Api.Posts
+                       App.Api.Tour
                        App.Config
                        App.Context
                        App.Database
                        App.Database.Migrations
+                       App.Docs
                        App.Middleware.ErrorHandler
-                       Client.CSS
                        Controllers.Home
                        Views.Home
+                       Views.Layout
+                       Views.Pages.Posts
                        Views.Utils
   hs-source-dirs:      src
   ghc-options:         -Wall
@@ -40,8 +43,9 @@ library
                      , wai                   >= 3.2  && < 3.3
                      , wai-extra             >= 3.0  && < 3.2
                      , wai-middleware-static >= 0.9  && < 0.10
-                     , clay                  >= 0.13 && < 0.17
                      , text                  >= 1.2  && < 2.2
+                     , bytestring            >= 0.10 && < 0.13
+                     , containers            >= 0.6  && < 0.8
                      , blaze-html            >= 0.9  && < 0.10
                      , blaze-markup          >= 0.8  && < 0.9
                      , aeson                 >= 2.0  && < 2.3
