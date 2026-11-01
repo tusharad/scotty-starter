@@ -1,1 +1,1 @@
-web: ./dist/build/app/app
+web: scotty-starter

@@ -1,9 +1,9 @@
-{ mkDerivation, aeson, base, blaze-html, blaze-markup, clay, scotty
-, stdenv, text, wai-extra, wai-middleware-static
+{ mkDerivation, aeson, base, blaze-html, blaze-markup, clay, lib, scotty
+, text, wai-extra, wai-middleware-static
 }:
 mkDerivation {
-  pname = "app";
-  version = "0.1.0.0";
+  pname = "scotty-starter";
+  version = "0.2.0.0";
   src = ./.;
   isLibrary = false;
   isExecutable = true;
@@ -11,8 +11,7 @@ mkDerivation {
     aeson base blaze-html blaze-markup clay scotty text wai-extra
     wai-middleware-static
   ];
-  homepage = "https://github.com/dmjio/scotty-starter";
-  description = "Starter kit project for Scotty Apps";
-  license = stdenv.lib.licenses.unfree;
-  hydraPlatforms = stdenv.lib.platforms.none;
+  homepage = "https://github.com/scotty-web/scotty-starter";
+  description = "Starter kit project for Scotty web applications";
+  license = lib.licenses.bsd3;
 }

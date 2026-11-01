@@ -1,6 +1,5 @@
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
-
 
 module Controllers.Home
     ( home
@@ -8,10 +7,11 @@ module Controllers.Home
     , post
     ) where
 
-import           Views.Home (homeView)
-import           Web.Scotty (ScottyM, get, html, json)
-import           Data.Aeson (ToJSON)
-import           GHC.Generics
+import           Data.Aeson   (ToJSON)
+import           Data.Text    (Text)
+import           GHC.Generics (Generic)
+import           Views.Home   (homeView)
+import           Web.Scotty   (ScottyM, get, html, json)
 
 home :: ScottyM ()
 home = get "/" homeView
@@ -24,9 +24,10 @@ login = get "/login" $ html "login"
 -}
 data Post = Post
   { postId    :: Int
-  , postTitle :: String } deriving Generic
+  , postTitle :: Text
+  } deriving (Show, Generic)
 
 instance ToJSON Post
 
-post :: ScottyM()
-post = get "/post" $ json $ Post 1 "Yello world"
+post :: ScottyM ()
+post = get "/post" $ json $ Post 1 "Hello from Scotty 0.30!"

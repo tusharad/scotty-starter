@@ -1,9 +1,43 @@
-cabal.sandbox.config
-.hsenv
-result
+# Cabal build artifacts
 dist
+dist-*
+dist-newstyle/
+cabal.project.local
+cabal.project.local~
+.ghc.environment.*
+
+# Stack build artifacts
+.stack-work/
+
+# GHC compiler artifacts
 *.o
 *.hi
+*.dyn_o
+*.dyn_hi
+*.prof
+*.aux
+*.hp
+*.eventlog
 *~
 
+# Nix build artifacts
+result
+result-*
+.direnv/
 
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Sandboxes (legacy)
+cabal.sandbox.config
+.hsenv
+
+# Editor & OS artifacts
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
