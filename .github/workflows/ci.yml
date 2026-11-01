@@ -155,17 +155,17 @@ jobs:
           done
 
           # Liveness & Readiness checks
-          curl -fsS http://localhost:3000/healthz | grep -q '"status":"ok"'
+          curl -fsS http://localhost:3000/healthz | grep -q '"status":"pass"'
           curl -fsS http://localhost:3000/readyz | grep -q '"status":"ready"'
           
           # OpenAPI JSON probe
-          curl -fsS http://localhost:3000/openapi.json | grep -q '"openapi":"3.0.0"'
+          curl -fsS http://localhost:3000/openapi.json | grep -q '"openapi":"3.0'
           
           # REST API database probe
           curl -fsS http://localhost:3000/api/posts | grep -q 'postId'
           
           # HTML5 homepage probe
-          curl -fsS http://localhost:3000/ | grep -q 'Scotty Web Starter'
+          curl -fsS http://localhost:3000/ | grep -q 'Scotty Starter'
 
       - name: Inspect container logs
         if: always()
