@@ -1,4 +1,4 @@
-.PHONY: help build run test repl check clean format lint watch
+.PHONY: help build run test repl check clean format lint watch docker-build docker-run preview-pages stack-build stack-run stack-test
 
 # Default target
 .DEFAULT_GOAL := help
@@ -7,14 +7,23 @@ help: ## Show this help message
 	@echo "Available commands:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-build: ## Build library, executable, and test suite
+build: ## Build library, executable, and test suite with Cabal
 	cabal build all
 
-run: ## Run the web server executable
+run: ## Run the web server executable with Cabal
 	cabal run scotty-starter
 
-test: ## Run test suite with direct output
+test: ## Run test suite with direct output via Cabal
 	cabal test --test-show-details=direct
+
+stack-build: ## Build library, executable, and test suite with Stack
+	stack build
+
+stack-run: ## Run the web server executable with Stack
+	stack run
+
+stack-test: ## Run test suite via Stack
+	stack test
 
 repl: ## Open interactive Cabal REPL
 	cabal repl

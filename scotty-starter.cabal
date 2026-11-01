@@ -13,7 +13,6 @@ copyright:           (c) 2015-2026 Scotty Contributors
 category:            Web
 build-type:          Simple
 extra-doc-files:     README.md
-                     ROADMAP.md
 
 source-repository head
   type:     git

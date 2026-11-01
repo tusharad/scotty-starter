@@ -53,7 +53,7 @@ flowchart TD
 
 ### Prerequisites
 * [GHC 9.6, 9.8, or 9.10](https://www.haskell.org/ghcup/)
-* [Cabal 3.0+](https://www.haskell.org/cabal/)
+* [Cabal 3.0+](https://www.haskell.org/cabal/) or [Stack 3.0+](https://docs.haskellstack.org/)
 * *(Optional)* [Docker](https://www.docker.com/) & [Make](https://www.gnu.org/software/make/)
 
 ### 1. Run the Development Server
@@ -62,20 +62,29 @@ flowchart TD
 git clone https://github.com/tusharad/scotty-starter.git
 cd scotty-starter
 
-# Run server with default SQLite configuration
+# Option A: Using Cabal
 cabal run scotty-starter
 
-# Or using Make:
-make run
+# Option B: Using Stack
+stack run
+
+# Option C: Using Make
+make run       # Cabal
+make stack-run # Stack
 ```
 Visit **http://localhost:3000** to explore the interactive laboratory console.
 
 ### 2. Run the Automated Test Suite
 ```bash
+# Using Cabal:
 cabal test --test-show-details=direct
 
+# Using Stack:
+stack test
+
 # Or using Make:
-make test
+make test        # Cabal
+make stack-test  # Stack
 ```
 
 ### 3. Live Development Watcher
@@ -126,7 +135,9 @@ scotty-starter/
 ├── Dockerfile                      # Multi-stage production container
 ├── docker-compose.yml              # Local container development config
 ├── flake.nix                       # Reproducible Nix developer shell
-└── Makefile                        # Developer automation shortcuts
+├── Makefile                        # Developer automation shortcuts
+├── scotty-starter.cabal            # Cabal package specification
+└── stack.yaml                      # Stack configuration (LTS 24 snapshot)
 ```
 
 ---
