@@ -25,9 +25,8 @@ listPosts ctx = runDb (ctxDbPool ctx) $ \conn ->
 
 -- | Retrieve the first post (legacy endpoint support).
 getFirstPost :: AppContext -> IO (Maybe Post)
-getFirstPost ctx = runDb (ctxDbPool ctx) $ \conn -> do
-  results <- query_ conn "SELECT id, title FROM posts ORDER BY id ASC LIMIT 1;"
-  pure (listToMaybe results)
+getFirstPost ctx = runDb (ctxDbPool ctx) $ \conn ->
+  listToMaybe <$> query_ conn "SELECT id, title FROM posts ORDER BY id ASC LIMIT 1;"
 
 -- | Search posts by title substring case-insensitively.
 searchPosts :: AppContext -> Text -> IO [Post]
@@ -36,9 +35,8 @@ searchPosts ctx q = runDb (ctxDbPool ctx) $ \conn ->
 
 -- | Find a single post by its primary key ID.
 getPostById :: AppContext -> Int -> IO (Maybe Post)
-getPostById ctx pid = runDb (ctxDbPool ctx) $ \conn -> do
-  results <- query conn "SELECT id, title FROM posts WHERE id = ? LIMIT 1;" (Only pid)
-  pure (listToMaybe results)
+getPostById ctx pid = runDb (ctxDbPool ctx) $ \conn ->
+  listToMaybe <$> query conn "SELECT id, title FROM posts WHERE id = ? LIMIT 1;" (Only pid)
 
 -- | Insert a new post record and return the created entity with generated ID.
 createPost :: AppContext -> Text -> IO Post
@@ -51,12 +49,10 @@ createPost ctx titleText = runDb (ctxDbPool ctx) $ \conn -> do
 updatePost :: AppContext -> Int -> Text -> IO Bool
 updatePost ctx pid newTitle = runDb (ctxDbPool ctx) $ \conn -> do
   execute conn "UPDATE posts SET title = ? WHERE id = ?;" (newTitle, pid)
-  affected <- changes conn
-  pure (affected > 0)
+  (> 0) <$> changes conn
 
 -- | Delete a post record by its ID, returning True if a record was removed.
 deletePost :: AppContext -> Int -> IO Bool
 deletePost ctx pid = runDb (ctxDbPool ctx) $ \conn -> do
   execute conn "DELETE FROM posts WHERE id = ?;" (Only pid)
-  affected <- changes conn
-  pure (affected > 0)
+  (> 0) <$> changes conn

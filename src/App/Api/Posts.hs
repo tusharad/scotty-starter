@@ -39,9 +39,7 @@ postsRoutes = do
   S.get "/api/posts" $ do
     ctx <- lift ask
     mQuery <- S.queryParamMaybe "q" :: S.ActionT AppM (Maybe Text)
-    posts <- liftIO $ case mQuery of
-      Just q  -> Q.searchPosts ctx q
-      Nothing -> Q.listPosts ctx
+    posts <- liftIO $ maybe (Q.listPosts ctx) (Q.searchPosts ctx) mQuery
     S.status status200
     S.json posts
 

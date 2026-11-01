@@ -30,3 +30,4 @@ securityHeaders :: Middleware
 securityHeaders app req respond =
   app req $ \resp ->
     respond (mapResponseHeaders (defaultSecurityHeaders <>) resp)
+

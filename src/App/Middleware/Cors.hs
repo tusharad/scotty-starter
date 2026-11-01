@@ -42,3 +42,4 @@ corsMiddleware allowedOrigins app req respond
       , ("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID, Accept, Cookie, HX-Request, HX-Target, HX-Current-URL")
       , ("Access-Control-Max-Age", "86400")
       ]
+

@@ -33,12 +33,11 @@ generateRequestId = do
 requestIdMiddleware :: Middleware
 requestIdMiddleware app req respond = do
   let mExisting = lookup "X-Request-ID" (requestHeaders req)
-  reqId <- case mExisting of
-    Just r  -> pure r
-    Nothing -> generateRequestId
+  reqId <- maybe generateRequestId pure mExisting
 
   let header :: Header
       header = ("X-Request-ID", reqId)
 
   app req $ \resp ->
     respond (mapResponseHeaders (header :) resp)
+

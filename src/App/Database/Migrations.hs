@@ -4,7 +4,7 @@ module App.Database.Migrations
     ( runMigrations
     ) where
 
-import           Control.Monad          (forM_, when)
+import           Control.Monad          (forM_, unless)
 import           Data.String            (fromString)
 import           Database.SQLite.Simple (Connection, Only (..), execute_,
                                          query_, withTransaction)
@@ -51,7 +51,7 @@ runMigrations conn = withTransaction conn $ do
 
   forM_ migrations $ \mig -> do
     let v = migVersion mig
-    when (v `notElem` appliedVersions) $ do
+    unless (v `elem` appliedVersions) $ do
       forM_ (migUp mig) $ \upSql -> execute_ conn (fromString upSql)
       forM_ (migSeed mig) $ \seedSql -> execute_ conn (fromString seedSql)
       execute_ conn (fromString ("INSERT INTO schema_migrations (version, name) VALUES (" ++ show v ++ ", '" ++ migName mig ++ "');"))

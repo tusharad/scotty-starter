@@ -39,9 +39,7 @@ homeRoutes = do
   S.get "/partials/posts/search" $ do
     ctx <- lift ask
     mQuery <- S.queryParamMaybe "q" :: S.ActionT AppM (Maybe Text)
-    posts <- liftIO $ case mQuery of
-      Just q  -> Q.searchPosts ctx q
-      Nothing -> Q.listPosts ctx
+    posts <- liftIO $ maybe (Q.listPosts ctx) (Q.searchPosts ctx) mQuery
     blaze $ postsList posts
 
   -- HTMX: Inline Post Creation Partial

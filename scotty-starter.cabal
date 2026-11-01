@@ -8,7 +8,7 @@ bug-reports:         https://github.com/scotty-web/scotty-starter/issues
 license:             BSD-3-Clause
 license-file:        LICENSE
 author:              David Johnson, Tushar Adhatrao
-maintainer:          your.name@gmail.com
+maintainer:          tushar.adhatrao@gmail.com
 copyright:           (c) 2015-2026 Scotty Contributors
 category:            Web
 build-type:          Simple
