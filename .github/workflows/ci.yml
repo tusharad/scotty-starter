@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    name: GHC ${{ matrix.ghc }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        ghc: ['9.6.6', '9.8.2', '9.10.1']
+        cabal: ['3.12.1.0']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Haskell (GHC & Cabal)
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
+
+      - name: Cache ~/.cabal/packages, ~/.cabal/store and dist-newstyle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cabal/packages
+            ~/.cabal/store
+            dist-newstyle
+          key: ${{ matrix.os }}-ghc-${{ matrix.ghc }}-cabal-${{ hashFiles('**/*.cabal') }}
+          restore-keys: |
+            ${{ matrix.os }}-ghc-${{ matrix.ghc }}-
+
+      - name: Cabal update
+        run: cabal update
+
+      - name: Verify package specification
+        run: cabal check
+
+      - name: Build dependencies
+        run: cabal build --only-dependencies --enable-tests
+
+      - name: Build library, executable & tests
+        run: cabal build all --enable-tests --ghc-options="-Wall -Werror"
+
+      - name: Run test suite
+        run: cabal test scotty-starter-test --test-show-details=direct
+

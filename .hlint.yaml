@@ -1,0 +1,15 @@
+# HLint configuration file
+# https://github.com/ndmitchell/hlint
+
+- arguments:
+    - -XOverloadedStrings
+    - -XRecordWildCards
+    - -XDeriveGeneric
+
+- ignore: { name: "Use lambda-case" }
+- ignore: { name: "Eta reduce" }
+
+- group:
+    name: general
+    enabled: true
+

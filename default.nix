@@ -1,3 +1,2 @@
-{ pkgs ? import <nixpkgs> { config = { allowUnfree = true; }; } 
-}:
-  pkgs.haskellPackages.callPackage ./scotty-starter.nix {}
+{ pkgs ? import <nixpkgs> {} }:
+pkgs.haskellPackages.callCabal2nix "scotty-starter" ./. {}
