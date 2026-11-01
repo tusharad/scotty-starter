@@ -2,32 +2,63 @@
 
 module App
     ( app
-    , scottyApp'
+    , makeApp
     , runApp
+    , runAppWithPort
+    , runAppWithConfig
+    , defaultTestApp
     ) where
 
-import           Controllers.Home                     (home, login, post)
+import           App.Api.Health                       (healthRoutes)
+import           App.Api.Posts                        (postsRoutes)
+import           App.Config                           (Config (..), loadConfig)
+import           App.Context                          (AppContext (..),
+                                                       AppRoute, initContext,
+                                                       runAppM)
+import           App.Middleware.ErrorHandler          (appErrorHandler)
+import           Controllers.Home                     (home, login)
 import           Network.Wai                          (Application)
 import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import           Network.Wai.Middleware.Static        (addBase, noDots,
-                                                        staticPolicy, (>->))
-import           Web.Scotty                           (ScottyM, middleware,
-                                                        scotty, scottyApp)
+                                                       staticPolicy, (>->))
+import qualified Web.Scotty.Trans                     as S
 
 -- | The core Scotty application specification (middleware + routes).
-app :: ScottyM ()
+app :: AppRoute
 app = do
-  middleware $ staticPolicy (noDots >-> addBase "static/images")
-  middleware logStdoutDev
+  S.defaultHandler appErrorHandler
+  S.middleware $ staticPolicy (noDots >-> addBase "static/images")
+  S.middleware logStdoutDev
   home
   login
-  post
+  healthRoutes
+  postsRoutes
 
--- | Convert the Scotty application into a WAI Application (for tests and embedding).
-scottyApp' :: IO Application
-scottyApp' = scottyApp app
+-- | Build a WAI Application using the provided AppContext.
+makeApp :: AppContext -> IO Application
+makeApp ctx = S.scottyAppT S.defaultOptions (runAppM ctx) app
 
--- | Run the application on a given port.
-runApp :: Int -> IO ()
-runApp port = scotty port app
+-- | Build a default WAI Application for testing.
+defaultTestApp :: IO Application
+defaultTestApp = do
+  cfg <- loadConfig
+  ctx <- initContext cfg
+  makeApp ctx
 
+-- | Run the application with a given configuration.
+runAppWithConfig :: Config -> IO ()
+runAppWithConfig cfg = do
+  ctx <- initContext cfg
+  S.scottyT (cfgPort cfg) (runAppM ctx) app
+
+-- | Run the application with an explicit port override.
+runAppWithPort :: Int -> IO ()
+runAppWithPort port = do
+  cfg <- loadConfig
+  runAppWithConfig cfg { cfgPort = port }
+
+-- | Run the application by loading environment configuration.
+runApp :: IO ()
+runApp = do
+  cfg <- loadConfig
+  runAppWithConfig cfg
